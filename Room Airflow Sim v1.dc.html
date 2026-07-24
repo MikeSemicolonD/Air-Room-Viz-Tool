@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="_ds/industry-f6e232aa-9b3b-4ce5-b21d-1845bee1682e/styles.css">
+<script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+<style>
+  :root { --ui-bg: #f2f2f3; --ui-line: rgba(29,31,32,.2); --ui-line-soft: rgba(29,31,32,.1); --ui-text: #1d1f20; --ui-dim: rgba(29,31,32,.52); }
+  [data-theme="dark"] { --ui-bg: #1d2d3d; --ui-line: rgba(242,242,243,.24); --ui-line-soft: rgba(242,242,243,.11); --ui-text: #f2f2f3; --ui-dim: rgba(242,242,243,.56); }
+  body { margin: 0; background: var(--ui-bg); overflow: hidden; }
+  a { color: var(--color-accent); }
+  a:hover { color: var(--color-accent-700); }
+  [data-theme="dark"] .blueprint > .corner { color: rgba(242,242,243,.5); }
+  [data-theme="dark"] .seg-opt:not(:has(input:checked)) { color: rgba(242,242,243,.74); }
+  [data-theme="dark"] .seg-opt:not(:has(input:checked)):hover { background: rgba(242,242,243,.09); }
+  [data-theme="dark"] .tag-neutral { background: rgba(242,242,243,.12); color: rgba(242,242,243,.8); }
+  [data-theme="dark"] .btn-secondary { border-color: rgba(242,242,243,.24); color: #f2f2f3; }
+  [data-theme="dark"] .btn-secondary:hover { background: rgba(242,242,243,.1); }
+  .k { font-family: var(--font-heading); font-weight: 600; font-size: 9.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--ui-dim); }
+  .n { font-family: var(--font-heading); font-weight: 600; line-height: 1; color: var(--ui-text); }
+  .pnl { background: var(--ui-bg); border: 1px solid var(--ui-line); color: var(--ui-text); position: absolute; }
+  .rw { display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 400 11px/1.5 var(--font-body); }
+  .num { width: 52px; min-height: 0; padding: 1px 5px; font: 400 11px/1.5 var(--font-body); color: var(--ui-text); background: transparent; border: 1px solid var(--ui-line); border-radius: 0; }
+  .num:focus-visible { border-color: var(--color-accent); outline: none; }
+  .sg { display: inline-flex; border: 1px solid var(--ui-line); }
+  .sg > button { font-family: var(--font-heading); font-weight: 600; font-size: 10px; letter-spacing: .07em; padding: 3px 7px; background: transparent; color: var(--ui-dim); border: 0; border-left: 1px solid var(--ui-line); cursor: pointer; }
+  .sg > button:first-child { border-left: 0; }
+  .sg > button:hover { color: var(--ui-text); }
+  .sg > button[aria-pressed="true"] { background: var(--color-accent); color: #f2f2f3; }
+  input[type="range"] { accent-color: var(--color-accent); }
+</style>
+</helmet>
+<div data-theme="{{ theme }}" style="position:relative;width:100vw;height:100vh;overflow:hidden;background:var(--ui-bg);color:var(--ui-text);font-family:var(--font-body)">
+
+  <canvas ref="{{ canvasRef }}" onPointerDown="{{ onDown }}" style="position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none"></canvas>
+
+  <div class="pnl blueprint" style="left:26px;top:26px;bottom:96px;width:264px;padding:12px 3px 12px 13px;display:flex;flex-direction:column">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="sg" style="margin:0 10px 12px 0;align-self:flex-start">
+      <button type="button" data-v="setup" aria-pressed="{{ tabSetup }}" onClick="{{ setTab }}" style="padding:4px 12px;font-size:11px">SETUP</button>
+      <button type="button" data-v="place" aria-pressed="{{ tabPlace }}" onClick="{{ setTab }}" style="padding:4px 12px;font-size:11px">PLACE</button>
+    </div>
+    <div style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:10px">
+    <sc-if value="{{ tabPlace }}" hint-placeholder-val="{{ false }}">
+      <div class="k" style="margin-bottom:8px">Projection &mdash; drag a chip</div>
+      <div class="sg" style="margin-bottom:10px">
+        <button type="button" data-v="plan" aria-pressed="{{ edPlan }}" onClick="{{ setEdView }}">PLAN X&middot;Y</button>
+        <button type="button" data-v="elevN" aria-pressed="{{ edElevN }}" onClick="{{ setEdView }}">ELEV X&middot;Z</button>
+        <button type="button" data-v="elevE" aria-pressed="{{ edElevE }}" onClick="{{ setEdView }}">ELEV Y&middot;Z</button>
+      </div>
+      <canvas ref="{{ edRef }}" onPointerDown="{{ edDown }}" style="display:block;width:100%;height:176px;border:1px solid var(--ui-line);touch-action:none;cursor:crosshair"></canvas>
+      <div class="rw" style="margin-top:10px"><span class="k">Selected</span><span class="n" style="font-size:13px">{{ selLabel }}</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:8px">
+        <div><div class="k" style="font-size:8px;margin-bottom:2px">X</div><div class="n" style="font-size:13px">{{ selX }}</div></div>
+        <div><div class="k" style="font-size:8px;margin-bottom:2px">Y</div><div class="n" style="font-size:13px">{{ selY }}</div></div>
+        <div><div class="k" style="font-size:8px;margin-bottom:2px">Z</div><div class="n" style="font-size:13px">{{ selZ }}</div></div>
+      </div>
+      <div class="k" style="margin-top:8px;font-size:8px;line-height:1.4">{{ selLock }}</div>
+      <div style="margin-top:12px">
+        <div class="k" style="margin-bottom:4px">Z &mdash; live on every projection</div>
+        <input type="range" min="0" max="1" step="0.01" value="{{ selZFrac }}" onChange="{{ setSelZ }}" style="width:100%;height:16px;margin:0">
+        <div style="position:relative;height:11px">
+          <span class="k" style="position:absolute;left:0;font-size:8px">FLOOR</span>
+          <span class="k" style="position:absolute;left:50%;transform:translateX(-50%);font-size:8px">{{ halfH }}</span>
+          <span class="k" style="position:absolute;right:0;font-size:8px">CEIL</span>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ tabSetup }}" hint-placeholder-val="{{ true }}">
+    <div class="k" style="margin-bottom:10px">Room &mdash; ft</div>
+    <div style="display:flex;gap:5px;margin-bottom:14px">
+      <input class="num" type="number" step="0.5" min="6" max="40" value="{{ W }}" onChange="{{ setW }}" style="flex:1;width:auto">
+      <input class="num" type="number" step="0.5" min="6" max="40" value="{{ D }}" onChange="{{ setD }}" style="flex:1;width:auto">
+      <input class="num" type="number" step="0.5" min="6" max="16" value="{{ H }}" onChange="{{ setH }}" style="flex:1;width:auto">
+    </div>
+
+    <div class="k" style="margin-bottom:8px">Window AC</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+      <div class="rw"><span>Wall</span><span class="sg"><button type="button" data-v="W" aria-pressed="{{ acW }}" onClick="{{ setAcWall }}">W</button><button type="button" data-v="E" aria-pressed="{{ acE }}" onClick="{{ setAcWall }}">E</button><button type="button" data-v="S" aria-pressed="{{ acS }}" onClick="{{ setAcWall }}">S</button><button type="button" data-v="N" aria-pressed="{{ acN }}" onClick="{{ setAcWall }}">N</button></span></div>
+      <div class="rw"><span>Supply air</span><span><input class="num" type="number" step="1" min="45" max="80" value="{{ acSupply }}" onChange="{{ setAcSupply }}"> &deg;F</span></div>
+      <div class="rw"><span>Sill height</span><span><input class="num" type="number" step="0.5" min="1" max="8" value="{{ acHeight }}" onChange="{{ setAcHeight }}"> ft</span></div>
+      <div>
+        <div class="rw" style="margin-bottom:3px"><span>Blower</span><span class="n" style="font-size:12px">{{ acLabel }}</span></div>
+        <input type="range" min="0" max="450" step="10" value="{{ acCfm }}" onChange="{{ setAcCfm }}" style="width:100%;height:16px;margin:0">
+        <div style="position:relative;height:11px">
+          <span class="k" style="position:absolute;left:0;font-size:8px;letter-spacing:.06em">OFF</span>
+          <span class="k" style="position:absolute;left:40%;transform:translateX(-50%);font-size:8px;letter-spacing:.06em">LOW</span>
+          <span class="k" style="position:absolute;left:62%;transform:translateX(-50%);font-size:8px;letter-spacing:.06em">MED</span>
+          <span class="k" style="position:absolute;left:84%;transform:translateX(-50%);font-size:8px;letter-spacing:.06em">HIGH</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="k" style="margin-bottom:8px">Second window</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+      <div class="rw"><span>Wall</span><span class="sg"><button type="button" data-v="W" aria-pressed="{{ fnW }}" onClick="{{ setFanWall }}">W</button><button type="button" data-v="E" aria-pressed="{{ fnE }}" onClick="{{ setFanWall }}">E</button><button type="button" data-v="S" aria-pressed="{{ fnS }}" onClick="{{ setFanWall }}">S</button><button type="button" data-v="N" aria-pressed="{{ fnN }}" onClick="{{ setFanWall }}">N</button></span></div>
+      <div class="rw"><span>Mode</span><span class="sg"><button type="button" data-v="shut" aria-pressed="{{ fdShut }}" onClick="{{ setFanDir }}">SHUT</button><button type="button" data-v="open" aria-pressed="{{ fdOpen }}" onClick="{{ setFanDir }}">OPEN</button><button type="button" data-v="out" aria-pressed="{{ fdOut }}" onClick="{{ setFanDir }}">FAN OUT</button><button type="button" data-v="in" aria-pressed="{{ fdIn }}" onClick="{{ setFanDir }}">IN</button></span></div>
+      <div>
+        <div class="rw" style="margin-bottom:3px"><span>Fan flow</span><span class="n" style="font-size:12px">{{ fanLabel }}</span></div>
+        <input type="range" min="0" max="2500" step="50" value="{{ fanCfm }}" onChange="{{ setFanCfm }}" style="width:100%;height:16px;margin:0">
+        <div style="position:relative;height:11px">
+          <span class="k" style="position:absolute;left:0;font-size:8px;letter-spacing:.06em">OFF</span>
+          <span class="k" style="position:absolute;left:44%;transform:translateX(-50%);font-size:8px;letter-spacing:.06em">LOW</span>
+          <span class="k" style="position:absolute;left:70%;transform:translateX(-50%);font-size:8px;letter-spacing:.06em">MED</span>
+          <span class="k" style="position:absolute;left:96%;transform:translateX(-50%);font-size:8px;letter-spacing:.06em">HIGH</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="k" style="margin-bottom:8px">Room &amp; loads</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="rw"><span>Door</span><span class="sg"><button type="button" data-v="S" aria-pressed="{{ drS }}" onClick="{{ setDoorWall }}">S</button><button type="button" data-v="N" aria-pressed="{{ drN }}" onClick="{{ setDoorWall }}">N</button><button type="button" data-v="W" aria-pressed="{{ drW }}" onClick="{{ setDoorWall }}">W</button><button type="button" data-v="E" aria-pressed="{{ drE }}" onClick="{{ setDoorWall }}">E</button><button type="button" data-v="none" aria-pressed="{{ drNone }}" onClick="{{ setDoorWall }}">SHUT</button></span></div>
+      <div class="rw"><span>Ceiling fan</span><span><input class="num" type="number" step="500" min="0" max="6000" value="{{ ceilCfm }}" onChange="{{ setCeilCfm }}"> CFM</span></div>
+      <div class="rw"><span>Internal load</span><span><input class="num" type="number" step="20" min="0" max="2000" value="{{ loadW }}" onChange="{{ setLoadW }}"> W</span></div>
+      <div class="rw"><span>Outside air</span><span><input class="num" type="number" step="1" min="20" max="120" value="{{ outdoor }}" onChange="{{ setOutdoor }}"> &deg;F</span></div>
+    </div>
+
+    <div class="k" style="margin:14px 0 8px">Sunlight</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="rw"><span>Glazed wall</span><span class="sg"><button type="button" data-v="W" aria-pressed="{{ snW }}" onClick="{{ setSunWall }}">W</button><button type="button" data-v="E" aria-pressed="{{ snE }}" onClick="{{ setSunWall }}">E</button><button type="button" data-v="S" aria-pressed="{{ snS }}" onClick="{{ setSunWall }}">S</button><button type="button" data-v="N" aria-pressed="{{ snN }}" onClick="{{ setSunWall }}">N</button></span></div>
+      <div class="rw"><span>Glazing</span><span class="sg"><button type="button" data-v="none" aria-pressed="{{ gzNone }}" onClick="{{ setSunGlaze }}">NONE</button><button type="button" data-v="clear" aria-pressed="{{ gzClear }}" onClick="{{ setSunGlaze }}">CLEAR</button><button type="button" data-v="shaded" aria-pressed="{{ gzShaded }}" onClick="{{ setSunGlaze }}">SHADED</button></span></div>
+      <div>
+        <div class="rw" style="margin-bottom:3px"><span>Time of day</span><span class="n" style="font-size:12px">{{ hourLabel }}</span></div>
+        <input type="range" min="6" max="19" step="0.25" value="{{ sunHour }}" onChange="{{ setSunHour }}" style="width:100%;height:16px;margin:0">
+        <div style="position:relative;height:11px">
+          <span class="k" style="position:absolute;left:0;font-size:8px">6 AM</span>
+          <span class="k" style="position:absolute;left:50%;transform:translateX(-50%);font-size:8px">12:30</span>
+          <span class="k" style="position:absolute;right:0;font-size:8px">7 PM</span>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+    </div>
+  </div>
+
+  <div class="pnl blueprint" style="right:26px;top:26px;width:196px;padding:12px 13px 13px">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="k" style="margin-bottom:11px">Readouts</div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div><div class="k" style="font-size:8px;letter-spacing:.1em;margin-bottom:3px">Mean air</div><div ref="{{ meanRef }}" class="n" style="font-size:26px">&mdash;</div></div>
+      <div><div class="k" style="font-size:8px;letter-spacing:.1em;margin-bottom:3px">Probe &mdash; click the floor</div><div ref="{{ probeRef }}" class="n" style="font-size:26px">&mdash;</div></div>
+      <div style="display:flex;gap:14px">
+        <div><div class="k" style="font-size:8px;letter-spacing:.1em;margin-bottom:3px">Ceil &minus; floor</div><div ref="{{ spreadRef }}" class="n" style="font-size:15px">&mdash;</div></div>
+        <div><div class="k" style="font-size:8px;letter-spacing:.1em;margin-bottom:3px">Air chg / hr</div><div ref="{{ achRef }}" class="n" style="font-size:15px">&mdash;</div></div>
+      </div>
+      <div><div class="k" style="font-size:8px;letter-spacing:.1em;margin-bottom:3px">Solar gain</div><div ref="{{ solarRef }}" class="n" style="font-size:15px">&mdash;</div></div>
+      <div>
+        <div class="rw" style="margin-bottom:5px"><span class="k" style="font-size:8px;letter-spacing:.1em">4-hour run</span><span ref="{{ runRef }}" class="k" style="font-size:8px;letter-spacing:.1em">not run</span></div>
+        <div style="border:1px solid var(--ui-line);height:56px;position:relative">
+          <svg viewBox="0 0 168 56" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" fill="none">
+            <path d="{{ chartMean }}" stroke="var(--color-accent)" stroke-width="1.3"></path>
+            <path d="{{ chartProbe }}" stroke="#c08161" stroke-width="1.3" stroke-dasharray="3 3"></path>
+          </svg>
+          <span class="k" style="position:absolute;right:4px;bottom:2px;font-size:7.5px">4 H</span>
+        </div>
+        <div class="rw" style="margin-top:5px"><span class="k" style="font-size:8px;letter-spacing:.06em">&mdash; MEAN</span><span class="k" style="font-size:8px;letter-spacing:.06em">&middot;&middot; PROBE</span></div>
+      </div>
+      <button type="button" class="btn btn-primary" onClick="{{ startRun }}" style="width:100%;font-size:11px;padding:5px 0">{{ runLabel }}</button>
+      <div class="k" ref="{{ statRef }}" style="font-size:8px;letter-spacing:.09em;text-align:center">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="pnl blueprint" style="left:26px;right:26px;bottom:26px;padding:9px 13px;display:flex;align-items:center;gap:10px">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <span class="sg" style="flex:none">
+      <button type="button" data-v="volume" aria-pressed="{{ vVol }}" onClick="{{ setView }}" style="padding:4px 10px;font-size:11px">VOLUME</button>
+      <button type="button" data-v="slice" aria-pressed="{{ vSlice }}" onClick="{{ setView }}" style="padding:4px 10px;font-size:11px">SLICE</button>
+      <button type="button" data-v="tracers" aria-pressed="{{ vTrace }}" onClick="{{ setView }}" style="padding:4px 10px;font-size:11px">TRACERS</button>
+      <button type="button" data-v="arrows" aria-pressed="{{ vArrow }}" onClick="{{ setView }}" style="padding:4px 10px;font-size:11px">ARROWS</button>
+    </span>
+    <span class="sg" style="flex:none">
+      <button type="button" data-v="Z" aria-pressed="{{ sZ }}" onClick="{{ setSliceAxis }}">Z</button>
+      <button type="button" data-v="X" aria-pressed="{{ sX }}" onClick="{{ setSliceAxis }}">X</button>
+      <button type="button" data-v="Y" aria-pressed="{{ sY }}" onClick="{{ setSliceAxis }}">Y</button>
+    </span>
+    <input type="range" min="0.04" max="0.96" step="0.01" value="{{ sliceAt }}" onChange="{{ setSliceAt }}" style="flex:1;min-width:56px;max-width:130px;height:16px;margin:0">
+    <span class="k" style="flex:none;font-size:8.5px;letter-spacing:.08em">{{ sliceLabel }}</span>
+    <span class="sg" style="flex:none">
+      <button type="button" data-v="light" aria-pressed="{{ tLight }}" onClick="{{ setTheme }}" style="padding:4px 9px;font-size:11px">LIGHT</button>
+      <button type="button" data-v="dark" aria-pressed="{{ tDark }}" onClick="{{ setTheme }}" style="padding:4px 9px;font-size:11px">DARK</button>
+    </span>
+    <span class="sg" style="flex:none">
+      <button type="button" data-v="F" aria-pressed="{{ uF }}" onClick="{{ setUnit }}" style="padding:4px 9px;font-size:11px">&deg;F</button>
+      <button type="button" data-v="C" aria-pressed="{{ uC }}" onClick="{{ setUnit }}" style="padding:4px 9px;font-size:11px">&deg;C</button>
+    </span>
+    <div style="flex:1;min-width:8px"></div>
+    <div style="flex:none;width:132px">
+      <div ref="{{ rampRef }}" style="height:7px;background:var(--ui-line)"></div>
+      <div class="rw" style="margin-top:4px"><span class="k" style="font-size:7.5px">{{ rampLo }}</span><span class="k" style="font-size:7.5px">SET</span><span class="k" style="font-size:7.5px">{{ rampHi }}</span></div>
+    </div>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;simQuality&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Coarse&quot;,&quot;Standard&quot;,&quot;Fine&quot;],&quot;default&quot;:&quot;Standard&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Simulation&quot;},&quot;simSpeed&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:1,&quot;max&quot;:6,&quot;step&quot;:1,&quot;default&quot;:2,&quot;unit&quot;:&quot;\u00d7&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulation&quot;},&quot;tracerCount&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:400,&quot;max&quot;:8000,&quot;step&quot;:400,&quot;default&quot;:3000,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulation&quot;},&quot;defaultTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Dark&quot;,&quot;Light&quot;],&quot;default&quot;:&quot;Dark&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Display&quot;}}">
+const AC_FACE = 0.7, BOX_FACE = 2.2, CEIL_FACE = 12;
+const AC_BANDS = [[40, 'OFF'], [230, 'LOW'], [330, 'MED'], [1e9, 'HIGH']];
+const BOX_BANDS = [[80, 'OFF'], [1420, 'LOW'], [2070, 'MED'], [1e9, 'HIGH']];
+const QUAL = { Coarse: 26, Standard: 34, Fine: 44 };
+const TLO = 52, THI = 100;
+const RAMP_DARK = [[52, [181, 217, 253]], [66, [107, 147, 189]], [74, [44, 69, 93]], [84, [192, 129, 97]], [100, [235, 184, 150]]];
+const RAMP_LIGHT = [[52, [65, 97, 128]], [66, [148, 188, 227]], [74, [242, 242, 243]], [84, [192, 129, 97]], [100, [125, 69, 48]]];
+
+function bandName(bands, cfm) { for (const b of bands) if (cfm < b[0]) return b[1]; return 'HIGH'; }
+function hourText(h) {
+  const hr = Math.floor(h), mn = Math.round((h - hr) * 60);
+  const ap = hr >= 12 ? 'PM' : 'AM', h12 = hr % 12 === 0 ? 12 : hr % 12;
+  return h12 + ':' + String(mn).padStart(2, '0') + ' ' + ap;
+}
+function ramp(stops, t) {
+  if (t <= stops[0][0]) return stops[0][1];
+  for (let i = 1; i < stops.length; i++) {
+    if (t <= stops[i][0]) {
+      const a = stops[i - 1], b = stops[i], f = (t - a[0]) / (b[0] - a[0]);
+      return [a[1][0] + (b[1][0] - a[1][0]) * f, a[1][1] + (b[1][1] - a[1][1]) * f, a[1][2] + (b[1][2] - a[1][2]) * f];
+    }
+  }
+  return stops[stops.length - 1][1];
+}
+
+class Component extends DCLogic {
+  state = {
+    W: 20, D: 12, H: 9, outdoor: 92,
+    acWall: 'W', acHeight: 6.5, acSupply: 60, acCfm: 280, acAlong: 6,
+    fanWall: 'E', fanDir: 'shut', fanCfm: 1750, fanAlong: 6, fanZ: 5.6,
+    doorWall: 'S', doorAlong: 15, ceilCfm: 0, ceilX: 10, ceilY: 6,
+    loadW: 180, loadX: 7, loadY: 4,
+    sunWall: 'S', sunAlong: 5, sunGlaze: 'clear', sunHour: 15,
+    tab: 'setup', edView: 'plan', sel: 'ac',
+    view: 'volume', sliceAxis: 'Z', sliceAt: 0.58,
+    theme: 'dark', unit: 'F', run: null, chart: null
+  };
+
+  constructor(p) {
+    super(p);
+    this.canvasRef = React.createRef();
+    this.meanRef = React.createRef(); this.probeRef = React.createRef();
+    this.spreadRef = React.createRef(); this.achRef = React.createRef();
+    this.achRef = React.createRef(); this.runRef = React.createRef();
+    this.rampRef = React.createRef(); this.statRef = React.createRef();
+    this.edRef = React.createRef(); this.solarRef = React.createRef();
+    this.frame = 0; this.fps = 0;
+  }
+
+  componentDidMount() {
+    this.state = Object.assign({}, this.state, { theme: this.props.defaultTheme === 'Light' ? 'light' : 'dark' });
+    this.build();
+    const wait = () => {
+      if (window.THREE) { this.initGL(); this.raf = requestAnimationFrame(this.loop); }
+      else setTimeout(wait, 60);
+    };
+    this.loop = () => { this.tick(); this.raf = requestAnimationFrame(this.loop); };
+    wait();
+    this._rs = () => this.resize();
+    window.addEventListener('resize', this._rs);
+  }
+
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+    window.removeEventListener('resize', this._rs);
+    if (this.renderer) this.renderer.dispose();
+  }
+
+  // ── solar gain: a beam through one glazed window landing on the floor ───
+  solar() {
+    const S = this.state;
+    if (S.sunGlaze === 'none') return null;
+    const h = S.sunHour;
+    if (h < 6.2 || h > 18.8) return null;
+    const alt = Math.sin(Math.PI * (h - 6) / 13) * 68 * Math.PI / 180;
+    if (alt < 0.13) return null;
+    const phi = (-90 + 180 * (h - 6) / 13) * Math.PI / 180;
+    const sx = -Math.sin(phi), sy = -Math.cos(phi);
+    const n = S.sunWall === 'W' ? [-1, 0] : S.sunWall === 'E' ? [1, 0] : S.sunWall === 'S' ? [0, -1] : [0, 1];
+    const face = n[0] * sx + n[1] * sy;
+    if (face <= 0.03) return null;
+    const cosInc = face * Math.cos(alt);
+    const shgc = S.sunGlaze === 'shaded' ? 0.26 : 0.62;
+    const watts = 270 * cosInc * 14 * shgc / 3.412;
+    const zc = 4.2;
+    const reach = Math.min(Math.max(S.W, S.D) * 0.9, zc / Math.tan(alt));
+    const wp = S.sunWall === 'W' ? [0, S.sunAlong] : S.sunWall === 'E' ? [S.W, S.sunAlong]
+      : S.sunWall === 'S' ? [S.sunAlong, 0] : [S.sunAlong, S.D];
+    const stretch = Math.min(3.4, 1 / Math.max(0.28, Math.sin(alt)));
+    return {
+      watts, cosInc, alt,
+      cx: Math.max(1, Math.min(S.W - 1, wp[0] - sx * reach)),
+      cy: Math.max(1, Math.min(S.D - 1, wp[1] - sy * reach)),
+      rx: 1.9 + Math.abs(sx) * (stretch - 1) * 1.4,
+      ry: 1.7 + Math.abs(sy) * (stretch - 1) * 1.4
+    };
+  }
+
+  syncGL() {
+    const S = this.state, P = this.props;
+    const snap = {
+      W: S.W, D: S.D, H: S.H, q: P.simQuality, tc: P.tracerCount,
+      acW: S.acWall, fnW: S.fanWall, drW: S.doorWall, fd: S.fanDir, ah: S.acHeight,
+      aa: S.acAlong, fa: S.fanAlong, fz: S.fanZ, da: S.doorAlong,
+      cx: S.ceilX, cy: S.ceilY, lx: S.loadX, ly: S.loadY,
+      sw: S.sunWall, sa2: S.sunAlong, sg: S.sunGlaze,
+      acOn: S.acCfm > 40, fnOn: S.fanCfm > 80, cfOn: S.ceilCfm > 100, ldOn: S.loadW > 0,
+      th: S.theme, vw: S.view, sa: S.sliceAxis
+    };
+    const pv = this._prev;
+    this._prev = snap;
+    if (!pv) return;
+    if (pv.W !== snap.W || pv.D !== snap.D || pv.H !== snap.H || pv.q !== snap.q || pv.tc !== snap.tc) {
+      this.build(); this.rebuildGL(); return;
+    }
+    if (pv.acW !== snap.acW || pv.fnW !== snap.fnW || pv.drW !== snap.drW || pv.fd !== snap.fd || pv.ah !== snap.ah ||
+        pv.aa !== snap.aa || pv.fa !== snap.fa || pv.fz !== snap.fz || pv.da !== snap.da) {
+      this.zone(); this.placeMarkers();
+    } else if (pv.acOn !== snap.acOn || pv.fnOn !== snap.fnOn || pv.cfOn !== snap.cfOn || pv.ldOn !== snap.ldOn ||
+               pv.cx !== snap.cx || pv.cy !== snap.cy || pv.lx !== snap.lx || pv.ly !== snap.ly) this.placeMarkers();
+    if (pv.th !== snap.th) this.themeGL();
+    if (pv.vw !== snap.vw || pv.sa !== snap.sa) this.viewGL();
+  }
+
+  // ── grid ──────────────────────────────────────────────────────────────
+  build() {
+    const S = this.state;
+    const L = QUAL[this.props.simQuality] || QUAL.Standard;
+    const mx = Math.max(S.W, S.D, S.H);
+    const f = mx / (L - 2);
+    const NX = Math.max(8, Math.round(S.W / f) + 2);
+    const NY = Math.max(8, Math.round(S.D / f) + 2);
+    const NZ = Math.max(8, Math.round(S.H / f) + 2);
+    const n = NX * NY * NZ;
+    this.g = { NX, NY, NZ, f, n, sxy: NX * NY };
+    const F = (this.F = {});
+    for (const k of ['u', 'v', 'w', 'T', 'u0', 'v0', 'w0', 'T0', 'p', 'div']) F[k] = new Float32Array(n);
+    F.type = new Uint8Array(n);
+    F.T.fill(78);
+    this.probe = { x: S.W * 0.5, y: S.D * 0.5, z: 5.2 };
+    this.zone();
+    this.initParts();
+  }
+
+  at(i, j, k) { return i + this.g.NX * (j + this.g.NY * k); }
+
+  wallSpan(wall) {
+    const { NX, NY } = this.g;
+    return wall === 'W' || wall === 'E' ? NY : NX;
+  }
+
+  wallLen(wall) { return (wall === 'W' || wall === 'E') ? this.state.D : this.state.W; }
+
+  opening(wall, zLo, zHi, widthFt, alongFt) {
+    const { NX, NY, NZ, f } = this.g;
+    const kLo = Math.max(1, Math.round(zLo / f)), kHi = Math.min(NZ - 2, Math.max(kLo, Math.round(zHi / f)));
+    const along = this.wallSpan(wall);
+    const halfC = Math.max(1, Math.round(widthFt / f / 2));
+    const want = alongFt === undefined ? Math.floor(along / 2) : Math.round(alongFt / f) + 1;
+    const mid = Math.max(1 + halfC, Math.min(along - 2 - halfC, want));
+    const aLo = Math.max(1, mid - halfC), aHi = Math.min(along - 2, mid + halfC);
+    const inner = [], shell = [];
+    for (let k = kLo; k <= kHi; k++) for (let a = aLo; a <= aHi; a++) {
+      if (wall === 'W') { shell.push(this.at(0, a, k)); inner.push(this.at(1, a, k), this.at(2, a, k)); }
+      else if (wall === 'E') { shell.push(this.at(NX - 1, a, k)); inner.push(this.at(NX - 2, a, k), this.at(NX - 3, a, k)); }
+      else if (wall === 'S') { shell.push(this.at(a, 0, k)); inner.push(this.at(a, 1, k), this.at(a, 2, k)); }
+      else { shell.push(this.at(a, NY - 1, k)); inner.push(this.at(a, NY - 2, k), this.at(a, NY - 3, k)); }
+    }
+    const nrm = { W: [1, 0, 0], E: [-1, 0, 0], S: [0, 1, 0], N: [0, -1, 0] }[wall];
+    return { inner, shell, nrm, kLo, kHi, aLo, aHi };
+  }
+
+  zone() {
+    const { NX, NY, NZ, f } = this.g, S = this.state, T = this.F.type;
+    T.fill(0);
+    for (let k = 0; k < NZ; k++) for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
+      if (i === 0 || j === 0 || k === 0 || i === NX - 1 || j === NY - 1 || k === NZ - 1) T[this.at(i, j, k)] = 1;
+    }
+    this.ac = this.opening(S.acWall, S.acHeight, S.acHeight + 1.4, 2.4, S.acAlong);
+    this.acRet = this.opening(S.acWall, Math.max(0.3, S.acHeight - 1.6), Math.max(1.0, S.acHeight - 0.3), 2.4, S.acAlong);
+    this.fan = this.opening(S.fanWall, S.fanZ, S.fanZ + 1.6, 1.8, S.fanAlong);
+    if (S.fanDir !== 'shut') for (const c of this.fan.shell) T[c] = 2;
+    if (S.doorWall !== 'none') {
+      this.door = this.opening(S.doorWall, 0, 6.7, 3.0, S.doorAlong);
+      for (const c of this.door.shell) T[c] = 2;
+    } else {
+      this.door = this.opening('S', 0, 0.5, 3.0, S.doorAlong);
+      for (const c of this.door.shell) T[c] = 2;
+    }
+    this.openCells = [];
+    for (let c = 0; c < T.length; c++) if (T[c] === 2) this.openCells.push(c);
+    this.cellVol = f * f * f;
+  }
+
+  initParts() {
+    const N = Math.max(200, Math.round(this.props.tracerCount ?? 3000));
+    this.P = { n: N, x: new Float32Array(N), y: new Float32Array(N), z: new Float32Array(N), life: new Float32Array(N) };
+    for (let i = 0; i < N; i++) this.respawn(i, true);
+  }
+
+  respawn(i, spread) {
+    const { NX, NY, NZ } = this.g, P = this.P;
+    P.x[i] = 1 + Math.random() * (NX - 3);
+    P.y[i] = 1 + Math.random() * (NY - 3);
+    P.z[i] = 1 + Math.random() * (NZ - 3);
+    P.life[i] = (spread ? Math.random() : 1) * 200 + 40;
+  }
+
+  // ── solver ────────────────────────────────────────────────────────────
+  smp(a, x, y, z) {
+    const { NX, NY, NZ, sxy } = this.g;
+    if (x < 1) x = 1; else if (x > NX - 2) x = NX - 2;
+    if (y < 1) y = 1; else if (y > NY - 2) y = NY - 2;
+    if (z < 1) z = 1; else if (z > NZ - 2) z = NZ - 2;
+    const i0 = x | 0, j0 = y | 0, k0 = z | 0;
+    const sx = x - i0, sy = y - j0, sz = z - k0;
+    const b = i0 + NX * (j0 + NY * k0);
+    const c000 = a[b], c100 = a[b + 1], c010 = a[b + NX], c110 = a[b + NX + 1];
+    const c001 = a[b + sxy], c101 = a[b + sxy + 1], c011 = a[b + sxy + NX], c111 = a[b + sxy + NX + 1];
+    const m00 = c000 + (c100 - c000) * sx, m10 = c010 + (c110 - c010) * sx;
+    const m01 = c001 + (c101 - c001) * sx, m11 = c011 + (c111 - c011) * sx;
+    const l0 = m00 + (m10 - m00) * sy, l1 = m01 + (m11 - m01) * sy;
+    return l0 + (l1 - l0) * sz;
+  }
+
+  advect(dst, src, dt) {
+    const { NX, NY, NZ, sxy } = this.g, F = this.F;
+    for (let k = 1; k < NZ - 1; k++) for (let j = 1; j < NY - 1; j++) {
+      let c = 1 + NX * (j + NY * k);
+      for (let i = 1; i < NX - 1; i++, c++) {
+        dst[c] = this.smp(src, i - dt * F.u[c], j - dt * F.v[c], k - dt * F.w[c]);
+      }
+    }
+  }
+
+  nb6(a, c, type) {
+    const { NX, sxy } = this.g;
+    const s = a[c];
+    return (type[c - 1] === 1 ? s : a[c - 1]) + (type[c + 1] === 1 ? s : a[c + 1])
+         + (type[c - NX] === 1 ? s : a[c - NX]) + (type[c + NX] === 1 ? s : a[c + NX])
+         + (type[c - sxy] === 1 ? s : a[c - sxy]) + (type[c + sxy] === 1 ? s : a[c + sxy]);
+  }
+
+  diffuseExplicit(a, k) {
+    const { NX, NY, NZ } = this.g, F = this.F, tmp = F.T0 === a ? F.div : F.T0;
+    for (let z = 1; z < NZ - 1; z++) for (let y = 1; y < NY - 1; y++) {
+      let c = 1 + NX * (y + NY * z);
+      for (let x = 1; x < NX - 1; x++, c++) tmp[c] = a[c] + k * (this.nb6(a, c, F.type) - 6 * a[c]);
+    }
+    for (let z = 1; z < NZ - 1; z++) for (let y = 1; y < NY - 1; y++) {
+      let c = 1 + NX * (y + NY * z);
+      for (let x = 1; x < NX - 1; x++, c++) a[c] = tmp[c];
+    }
+  }
+
+  diffuseImplicit(a, k, iters) {
+    const { NX, NY, NZ } = this.g, F = this.F, src = F.div;
+    src.set(a);
+    const den = 1 + 6 * k;
+    for (let it = 0; it < iters; it++) {
+      for (let z = 1; z < NZ - 1; z++) for (let y = 1; y < NY - 1; y++) {
+        let c = 1 + NX * (y + NY * z);
+        for (let x = 1; x < NX - 1; x++, c++) a[c] = (src[c] + k * this.nb6(a, c, F.type)) / den;
+      }
+    }
+  }
+
+  project(iters) {
+    const { NX, NY, NZ, sxy } = this.g, F = this.F, { u, v, w, p, div, type } = F;
+    for (let c = 0; c < p.length; c++) if (type[c] === 2) p[c] = 0;
+    for (let k = 1; k < NZ - 1; k++) for (let j = 1; j < NY - 1; j++) {
+      let c = 1 + NX * (j + NY * k);
+      for (let i = 1; i < NX - 1; i++, c++) {
+        div[c] = -0.5 * ((u[c + 1] - u[c - 1]) + (v[c + NX] - v[c - NX]) + (w[c + sxy] - w[c - sxy]));
+      }
+    }
+    for (let it = 0; it < iters; it++) {
+      for (let k = 1; k < NZ - 1; k++) for (let j = 1; j < NY - 1; j++) {
+        let c = 1 + NX * (j + NY * k);
+        for (let i = 1; i < NX - 1; i++, c++) p[c] = (div[c] + this.nb6(p, c, type)) / 6;
+      }
+    }
+    for (let k = 1; k < NZ - 1; k++) for (let j = 1; j < NY - 1; j++) {
+      let c = 1 + NX * (j + NY * k);
+      for (let i = 1; i < NX - 1; i++, c++) {
+        const s = p[c];
+        u[c] -= 0.5 * ((type[c + 1] === 1 ? s : p[c + 1]) - (type[c - 1] === 1 ? s : p[c - 1]));
+        v[c] -= 0.5 * ((type[c + NX] === 1 ? s : p[c + NX]) - (type[c - NX] === 1 ? s : p[c - NX]));
+        w[c] -= 0.5 * ((type[c + sxy] === 1 ? s : p[c + sxy]) - (type[c - sxy] === 1 ? s : p[c - sxy]));
+      }
+    }
+    // no penetration
+    for (let k = 1; k < NZ - 1; k++) for (let j = 1; j < NY - 1; j++) {
+      let c = this.at(1, j, k); if (type[c - 1] === 1 && u[c] < 0) u[c] = 0;
+      c = this.at(NX - 2, j, k); if (type[c + 1] === 1 && u[c] > 0) u[c] = 0;
+    }
+    for (let k = 1; k < NZ - 1; k++) for (let i = 1; i < NX - 1; i++) {
+      let c = this.at(i, 1, k); if (type[c - NX] === 1 && v[c] < 0) v[c] = 0;
+      c = this.at(i, NY - 2, k); if (type[c + NX] === 1 && v[c] > 0) v[c] = 0;
+    }
+    for (let j = 1; j < NY - 1; j++) for (let i = 1; i < NX - 1; i++) {
+      let c = this.at(i, j, 1); if (w[c] < 0) w[c] = 0;
+      c = this.at(i, j, NZ - 2); if (w[c] > 0) w[c] = 0;
+    }
+    for (const c of this.openCells) {
+      const inner = this.innerOf(c);
+      if (inner >= 0) { u[c] = u[inner]; v[c] = v[inner]; w[c] = w[inner]; }
+    }
+  }
+
+  innerOf(c) {
+    const { NX, NY, NZ, sxy } = this.g;
+    const i = c % NX, rest = (c - i) / NX, j = rest % NY, k = (rest - j) / NY;
+    if (i === 0) return c + 1;
+    if (i === NX - 1) return c - 1;
+    if (j === 0) return c + NX;
+    if (j === NY - 1) return c - NX;
+    if (k === 0) return c + sxy;
+    if (k === NZ - 1) return c - sxy;
+    return -1;
+  }
+
+  sources() {
+    const S = this.state, F = this.F, { f } = this.g;
+    const toCell = (fpm) => (fpm / 60) / f;
+    if (S.acCfm > 40) {
+      const s = toCell(S.acCfm / AC_FACE), n = this.ac.nrm;
+      for (const c of this.ac.inner) { F.u[c] = n[0] * s; F.v[c] = n[1] * s; F.w[c] = -0.22 * s; F.T[c] = S.acSupply; }
+      // a window AC recirculates: an equal return just below the supply keeps it mass-neutral
+      const rs = s * (this.ac.inner.length / Math.max(1, this.acRet.inner.length));
+      for (const c of this.acRet.inner) { F.u[c] = -n[0] * rs; F.v[c] = -n[1] * rs; F.w[c] = 0; }
+    }
+    if ((S.fanDir === 'out' || S.fanDir === 'in') && S.fanCfm > 80) {
+      const s = toCell(S.fanCfm / BOX_FACE), n = this.fan.nrm, d = S.fanDir === 'in' ? 1 : -1;
+      for (const c of this.fan.inner) {
+        F.u[c] = n[0] * s * d; F.v[c] = n[1] * s * d; F.w[c] = 0;
+        if (S.fanDir === 'in') F.T[c] = S.outdoor;
+      }
+    }
+    if (S.ceilCfm > 100) {
+      const { NX, NY, NZ } = this.g, s = toCell(S.ceilCfm / CEIL_FACE);
+      const ci = Math.max(2, Math.min(NX - 3, Math.round(S.ceilX / f) + 1));
+      const cj = Math.max(2, Math.min(NY - 3, Math.round(S.ceilY / f) + 1));
+      const r = Math.max(1, Math.round(2.4 / f));
+      for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+        if (di * di + dj * dj > r * r) continue;
+        const c = this.at(ci + di, cj + dj, NZ - 3);
+        if (F.type[c] === 0) { F.w[c] = -s; F.u[c] *= 0.4; F.v[c] *= 0.4; }
+      }
+    }
+    for (const c of this.openCells) F.T[c] = S.outdoor;
+  }
+
+  step(dt, iters) {
+    const { NX, NY, NZ, f } = this.g, F = this.F, S = this.state;
+    this.sources();
+    let sum = 0, cnt = 0;
+    for (let k = 1; k < NZ - 1; k++) for (let j = 1; j < NY - 1; j++) {
+      let c = 1 + NX * (j + NY * k);
+      for (let i = 1; i < NX - 1; i++, c++) { sum += F.T[c]; cnt++; }
+    }
+    const Tm = sum / cnt; this.Tmean = Tm;
+    const bc = 32.2 / (530 * f), drag = Math.min(0.9, dt * 0.5), cap = 60 / f;
+    for (let k = 1; k < NZ - 1; k++) for (let j = 1; j < NY - 1; j++) {
+      let c = 1 + NX * (j + NY * k);
+      for (let i = 1; i < NX - 1; i++, c++) {
+        F.w[c] += dt * bc * (F.T[c] - Tm);
+        F.u[c] -= drag * F.u[c]; F.v[c] -= drag * F.v[c]; F.w[c] -= drag * F.w[c];
+        if (F.w[c] > cap) F.w[c] = cap; else if (F.w[c] < -cap) F.w[c] = -cap;
+      }
+    }
+    F.u0.set(F.u); F.v0.set(F.v); F.w0.set(F.w);
+    this.advect(F.u, F.u0, dt); this.advect(F.v, F.v0, dt); this.advect(F.w, F.w0, dt);
+    this.project(iters);
+    this.thermal(dt, false);
+    this.sources();
+  }
+
+  thermal(dt, implicit) {
+    const { NX, NY, NZ, f } = this.g, F = this.F, S = this.state;
+    F.T0.set(F.T);
+    this.advect(F.T, F.T0, dt);
+    const kc = 0.3 / (f * f);
+    if (implicit) this.diffuseImplicit(F.T, kc * dt, 14);
+    else this.diffuseExplicit(F.T, Math.min(0.14, kc * dt));
+    // envelope + internal load
+    const hw = Math.min(0.5, dt * 0.018);
+    const cellMassCp = this.cellVol * 0.075 * 0.24;
+    const ci = Math.max(2, Math.min(NX - 3, Math.round(S.loadX / f) + 1));
+    const cj = Math.max(2, Math.min(NY - 3, Math.round(S.loadY / f) + 1));
+    const rl = Math.max(1, Math.round(1.6 / f));
+    const nLoad = (2 * rl + 1) * (2 * rl + 1);
+    const dTload = S.loadW > 0 ? (S.loadW * 3.412 / 3600) * dt / (cellMassCp * nLoad) : 0;
+    for (let k = 1; k < NZ - 1; k++) for (let j = 1; j < NY - 1; j++) {
+      let c = 1 + NX * (j + NY * k);
+      for (let i = 1; i < NX - 1; i++, c++) {
+        if (F.type[c - 1] === 1 || F.type[c + 1] === 1 || F.type[c - NX] === 1 || F.type[c + NX] === 1 || F.type[c + this.g.sxy] === 1) {
+          F.T[c] += hw * (S.outdoor - F.T[c]);
+        } else if (F.type[c - this.g.sxy] === 1) F.T[c] += hw * (72 - F.T[c]);
+      }
+    }
+    if (dTload > 0) {
+      for (let dj = -rl; dj <= rl; dj++) for (let di = -rl; di <= rl; di++) {
+        const c = this.at(ci + di, cj + dj, 2);
+        if (F.type[c] === 0) F.T[c] += dTload;
+      }
+    }
+    const sol = this.solar();
+    if (sol && sol.watts > 4) {
+      const i0 = Math.max(1, Math.round((sol.cx - sol.rx) / f) + 1), i1 = Math.min(NX - 2, Math.round((sol.cx + sol.rx) / f) + 1);
+      const j0 = Math.max(1, Math.round((sol.cy - sol.ry) / f) + 1), j1 = Math.min(NY - 2, Math.round((sol.cy + sol.ry) / f) + 1);
+      const kTop = Math.max(2, Math.min(NZ - 2, Math.round(1.1 / f)));
+      const nc = Math.max(1, (i1 - i0 + 1) * (j1 - j0 + 1) * kTop);
+      const dTs = (sol.watts * 3.412 / 3600) * dt / (cellMassCp * nc);
+      for (let k = 1; k <= kTop; k++) for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const c = this.at(i, j, k);
+        if (F.type[c] === 0) F.T[c] += dTs;
+      }
+    }
+    for (const c of this.openCells) F.T[c] = S.outdoor;
+  }
+
+  moveParts(dt) {
+    const P = this.P; if (!P) return;
+    const { NX, NY, NZ } = this.g, F = this.F;
+    for (let i = 0; i < P.n; i++) {
+      const x = P.x[i], y = P.y[i], z = P.z[i];
+      const uu = this.smp(F.u, x, y, z), vv = this.smp(F.v, x, y, z), ww = this.smp(F.w, x, y, z);
+      P.x[i] = x + uu * dt; P.y[i] = y + vv * dt; P.z[i] = z + ww * dt;
+      P.life[i] -= 1;
+      const sp = Math.abs(uu) + Math.abs(vv) + Math.abs(ww);
+      if (P.life[i] <= 0 || sp < 0.25 || P.x[i] < 1 || P.x[i] > NX - 2 || P.y[i] < 1 || P.y[i] > NY - 2 || P.z[i] < 1 || P.z[i] > NZ - 2) this.respawn(i, false);
+    }
+  }
+
+  // ── three.js ──────────────────────────────────────────────────────────
+  initGL() {
+    const T = window.THREE, c = this.canvasRef.current;
+    this.renderer = new T.WebGLRenderer({ canvas: c, antialias: true, alpha: false });
+    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    this.scene = new T.Scene();
+    this.camera = new T.PerspectiveCamera(42, 1, 0.1, 400);
+    this.orbit = { az: -0.85, el: 0.42, dist: 1 };
+    this.root = new T.Group();
+    this.scene.add(this.root);
+    this.lut = new T.DataTexture(new Uint8Array(256 * 4), 256, 1);
+    this.lut.minFilter = this.lut.magFilter = T.LinearFilter;
+    this.lut.needsUpdate = true;
+    this.attachInput(c);
+    this.rebuildGL();
+    this.resize();
+  }
+
+  attachInput(c) {
+    let drag = null;
+    c.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, az: this.orbit.az, el: this.orbit.el, moved: 0 }; c.setPointerCapture(e.pointerId); });
+    c.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      drag.moved = Math.abs(dx) + Math.abs(dy);
+      this.orbit.az = drag.az - dx * 0.006;
+      this.orbit.el = Math.max(-0.25, Math.min(1.4, drag.el + dy * 0.005));
+    });
+    c.addEventListener('pointerup', (e) => { this._lastDrag = drag ? drag.moved : 99; drag = null; });
+    c.addEventListener('wheel', (e) => { e.preventDefault(); this.orbit.dist = Math.max(0.55, Math.min(3, this.orbit.dist * (1 + Math.sign(e.deltaY) * 0.09))); }, { passive: false });
+  }
+
+  rebuildGL() {
+    const T = window.THREE; if (!T || !this.scene) return;
+    const S = this.state, { NX, NY, NZ } = this.g;
+    while (this.root.children.length) {
+      const o = this.root.children.pop();
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) o.material.dispose();
+    }
+    const W = S.W, D = S.D, H = S.H;
+
+    const edges = new T.LineSegments(
+      new T.EdgesGeometry(new T.BoxGeometry(W, H, D)),
+      new T.LineBasicMaterial({ transparent: true, opacity: 0.55 })
+    );
+    edges.position.y = H / 2; this.edges = edges; this.root.add(edges);
+
+    const grid = new T.GridHelper(Math.max(W, D), Math.round(Math.max(W, D)));
+    grid.material.transparent = true; grid.material.opacity = 0.16;
+    this.grid = grid; this.root.add(grid);
+
+    this.field3 = new T.Data3DTexture(new Uint8Array(NX * NY * NZ), NX, NY, NZ);
+    this.field3.format = T.RedFormat; this.field3.type = T.UnsignedByteType;
+    this.field3.minFilter = this.field3.magFilter = T.LinearFilter;
+    this.field3.unpackAlignment = 1; this.field3.needsUpdate = true;
+
+    this.volMat = new T.RawShaderMaterial({
+      glslVersion: T.GLSL3, side: T.BackSide, transparent: true, depthWrite: false,
+      uniforms: {
+        uField: { value: this.field3 }, uLut: { value: this.lut },
+        uCam: { value: new T.Vector3() }, uDensity: { value: 0.9 }, uMid: { value: 0.45 }
+      },
+      vertexShader: [
+        'precision highp float;', 'in vec3 position;',
+        'uniform mat4 modelViewMatrix; uniform mat4 projectionMatrix; uniform vec3 uCam;',
+        'out vec3 vOrigin; out vec3 vDir;',
+        'void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);',
+        ' vOrigin = uCam; vDir = position - uCam; }'
+      ].join('\n'),
+      fragmentShader: [
+        'precision highp float; precision highp sampler3D;',
+        'in vec3 vOrigin; in vec3 vDir; out vec4 outColor;',
+        'uniform sampler3D uField; uniform sampler2D uLut; uniform float uDensity; uniform float uMid;',
+        'vec2 hitBox(vec3 o, vec3 d){ vec3 bmin = vec3(-0.5), bmax = vec3(0.5);',
+        ' vec3 inv = 1.0/d; vec3 t0 = (bmin-o)*inv, t1 = (bmax-o)*inv;',
+        ' vec3 tmin = min(t0,t1), tmax = max(t0,t1);',
+        ' return vec2(max(tmin.x,max(tmin.y,tmin.z)), min(tmax.x,min(tmax.y,tmax.z))); }',
+        'void main(){ vec3 rd = normalize(vDir); vec2 h = hitBox(vOrigin, rd);',
+        ' if (h.x > h.y) discard; h.x = max(h.x, 0.0);',
+        ' float dt = (h.y-h.x)/84.0;',
+        ' vec3 p = vOrigin + rd*h.x; vec3 inc = rd*dt;',
+        ' vec4 acc = vec4(0.0);',
+        ' for (float i=0.0; i<84.0; i+=1.0){',
+        '   float t = texture(uField, vec3(p.x, p.z, p.y) + vec3(0.5)).r;',
+        '   float dev = abs(t - uMid) * 2.0;',
+        '   float a = uDensity * pow(dev, 1.35) * dt * 16.0;',
+        '   vec3 col = texture(uLut, vec2(t, 0.5)).rgb;',
+        '   acc.rgb += (1.0-acc.a) * col * a; acc.a += (1.0-acc.a) * a;',
+        '   p += inc; if (acc.a > 0.97) break; }',
+        ' if (acc.a < 0.004) discard; outColor = acc; }'
+      ].join('\n')
+    });
+    this.vol = new T.Mesh(new T.BoxGeometry(1, 1, 1), this.volMat);
+    this.vol.scale.set(W, H, D);
+    this.vol.position.y = H / 2; this.root.add(this.vol);
+
+    this.sliceTex = new T.DataTexture(new Uint8Array(4), 1, 1);
+    this.sliceTex.minFilter = this.sliceTex.magFilter = T.LinearFilter;
+    this._sliceKey = null;
+    this.slice = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: this.sliceTex, transparent: true, side: T.DoubleSide, depthWrite: false }));
+    this.root.add(this.slice);
+
+    const N = this.P.n;
+    const tg = new T.BufferGeometry();
+    tg.setAttribute('position', new T.BufferAttribute(new Float32Array(N * 6), 3));
+    tg.setAttribute('color', new T.BufferAttribute(new Float32Array(N * 6), 3));
+    this.tracers = new T.LineSegments(tg, new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8 }));
+    this.root.add(this.tracers);
+
+    const st = 2;
+    const ax = [], ay = [], az = [];
+    for (let k = 2; k < NZ - 2; k += st) for (let j = 2; j < NY - 2; j += st) for (let i = 2; i < NX - 2; i += st) { ax.push(i); ay.push(j); az.push(k); }
+    this.lat = { i: ax, j: ay, k: az, n: ax.length };
+    const ag = new T.BufferGeometry();
+    ag.setAttribute('position', new T.BufferAttribute(new Float32Array(this.lat.n * 6), 3));
+    ag.setAttribute('color', new T.BufferAttribute(new Float32Array(this.lat.n * 6), 3));
+    this.arrows = new T.LineSegments(ag, new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9 }));
+    this.root.add(this.arrows);
+
+    this.probeDot = new T.Mesh(new T.SphereGeometry(0.22, 12, 10), new T.MeshBasicMaterial({ color: 0x5980a6 }));
+    this.root.add(this.probeDot);
+    this.sunWin = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(1, 1, 1)), new T.LineBasicMaterial({ color: 0xc08161 }));
+    this.root.add(this.sunWin);
+    this.sunPatch = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ color: 0xebb896, transparent: true, opacity: 0.32, side: T.DoubleSide, depthWrite: false }));
+    this.sunPatch.rotation.x = -Math.PI / 2;
+    this.root.add(this.sunPatch);
+    this.probeStem = new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(), new T.Vector3()]), new T.LineBasicMaterial({ transparent: true, opacity: 0.5 }));
+    this.root.add(this.probeStem);
+
+    this.markers = [];
+    for (let m = 0; m < 5; m++) {
+      const mk = new T.Mesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ transparent: true, opacity: 0.5 }));
+      const ed = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(1, 1, 1)), new T.LineBasicMaterial());
+      this.markers.push({ mk, ed });
+      this.root.add(mk); this.root.add(ed);
+    }
+    this.placeMarkers();
+    this.themeGL();
+    this.viewGL();
+  }
+
+  placeMarkers() {
+    const T = window.THREE; if (!this.markers) return;
+    const S = this.state, { f } = this.g;
+    const cfg = [
+      { op: this.ac, wall: S.acWall, col: 0x94bce3, on: S.acCfm > 40 },
+      { op: this.fan, wall: S.fanWall, col: 0xc08161, on: S.fanDir !== 'shut' },
+      { op: this.door, wall: S.doorWall === 'none' ? 'S' : S.doorWall, col: 0x9aa3ab, on: S.doorWall !== 'none' }
+    ];
+    for (let m = 0; m < 3; m++) {
+      const { mk, ed } = this.markers[m], q = cfg[m];
+      if (!q.op) { mk.visible = ed.visible = false; continue; }
+      mk.visible = ed.visible = q.on;
+      if (m === 2) mk.visible = false;
+      const aLo = q.op.aLo * f, aHi = (q.op.aHi + 1) * f;
+      const zLo = q.op.kLo * f, zHi = (q.op.kHi + 1) * f;
+      const along = (aLo + aHi) / 2, len = Math.max(0.4, aHi - aLo), hgt = Math.max(0.4, zHi - zLo);
+      const cx = q.wall === 'W' ? 0.3 : q.wall === 'E' ? S.W - 0.3 : along;
+      const cy = q.wall === 'S' ? 0.3 : q.wall === 'N' ? S.D - 0.3 : along;
+      const sx = (q.wall === 'W' || q.wall === 'E') ? 0.5 : len;
+      const sy = (q.wall === 'S' || q.wall === 'N') ? 0.5 : len;
+      for (const o of [mk, ed]) {
+        o.scale.set(sx, hgt, sy);
+        o.position.set(cx - S.W / 2, (zLo + zHi) / 2, cy - S.D / 2);
+      }
+      mk.material.color.setHex(q.col); ed.material.color.setHex(q.col);
+    }
+    const pts = [
+      { x: S.ceilX, y: S.ceilY, z: S.H - 0.3, sx: 4.8, sh: 0.2, sy: 4.8, col: 0x94bce3, on: S.ceilCfm > 100 },
+      { x: S.loadX, y: S.loadY, z: 1.0, sx: 2.0, sh: 2.0, sy: 2.0, col: 0xc08161, on: S.loadW > 0 }
+    ];
+    for (let m = 0; m < 2; m++) {
+      const { mk, ed } = this.markers[3 + m], q = pts[m];
+      mk.visible = false; ed.visible = q.on;
+      ed.scale.set(q.sx, q.sh, q.sy);
+      ed.position.set(q.x - S.W / 2, q.z, q.y - S.D / 2);
+      ed.material.color.setHex(q.col);
+    }
+  }
+
+  // ── 2D placement editor ───────────────────────────────────────────────
+  devices() {
+    const S = this.state;
+    const pt = (w, a) => w === 'W' ? [0, a] : w === 'E' ? [S.W, a] : w === 'S' ? [a, 0] : [a, S.D];
+    const list = [
+      { id: 'ac', label: 'AC', wall: S.acWall, along: S.acAlong, z: S.acHeight + 0.7, col: '#94bce3', on: S.acCfm > 40 },
+      { id: 'fan', label: 'WINDOW FAN', wall: S.fanWall, along: S.fanAlong, z: S.fanZ + 0.8, col: '#c08161', on: S.fanDir !== 'shut' },
+      { id: 'door', label: 'DOOR', wall: S.doorWall === 'none' ? 'S' : S.doorWall, along: S.doorAlong, z: 3.35, col: '#8f9aa4', on: S.doorWall !== 'none' },
+      { id: 'ceil', label: 'CEILING FAN', x: S.ceilX, y: S.ceilY, z: S.H - 0.5, col: '#94bce3', on: S.ceilCfm > 100 },
+      { id: 'load', label: 'HEAT LOAD', x: S.loadX, y: S.loadY, z: 1.2, col: '#c08161', on: S.loadW > 0 },
+      { id: 'sun', label: 'GLAZED WINDOW', wall: S.sunWall, along: S.sunAlong, z: 4.2, col: '#ebb896', on: S.sunGlaze !== 'none' }
+    ];
+    for (const d of list) if (d.wall) { const p = pt(d.wall, d.along); d.x = p[0]; d.y = p[1]; }
+    return list;
+  }
+
+  edMap() {
+    const S = this.state, v = S.edView, sz = this.edSize || { w: 200, h: 176 };
+    const aw = v === 'elevE' ? S.D : S.W;
+    const ah = v === 'plan' ? S.D : S.H;
+    const sc = Math.min((sz.w - 30) / aw, (sz.h - 30) / ah);
+    const ox = (sz.w - aw * sc) / 2, oy = (sz.h - ah * sc) / 2;
+    return {
+      sc, ox, oy, aw, ah, v, w: sz.w, h: sz.h,
+      to: (d) => v === 'plan' ? [ox + d.x * sc, oy + d.y * sc]
+        : v === 'elevN' ? [ox + d.x * sc, oy + (S.H - d.z) * sc]
+        : [ox + d.y * sc, oy + (S.H - d.z) * sc],
+      from: (px, py) => ({ a: (px - ox) / sc, b: v === 'plan' ? (py - oy) / sc : S.H - (py - oy) / sc })
+    };
+  }
+
+  drawEd() {
+    const cv = this.edRef.current; if (!cv) return;
+    const cw = cv.clientWidth || 200, chh = cv.clientHeight || 176;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (!this.edSize || this.edSize.w !== cw || this.edSize.h !== chh) {
+      this.edSize = { w: cw, h: chh };
+      cv.width = Math.round(cw * dpr); cv.height = Math.round(chh * dpr);
+    }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const S = this.state, dark = S.theme === 'dark';
+    const ink = dark ? '#f2f2f3' : '#1d1f20';
+    g.clearRect(0, 0, cw, chh);
+    g.fillStyle = dark ? '#1d2d3d' : '#f2f2f3';
+    g.fillRect(0, 0, cw, chh);
+    const M = this.edMap();
+    // grid at 1 ft
+    g.strokeStyle = dark ? 'rgba(242,242,243,.09)' : 'rgba(29,31,32,.08)';
+    g.lineWidth = 1; g.beginPath();
+    for (let x = 0; x <= M.aw + 0.001; x++) { g.moveTo(M.ox + x * M.sc, M.oy); g.lineTo(M.ox + x * M.sc, M.oy + M.ah * M.sc); }
+    for (let y = 0; y <= M.ah + 0.001; y++) { g.moveTo(M.ox, M.oy + y * M.sc); g.lineTo(M.ox + M.aw * M.sc, M.oy + y * M.sc); }
+    g.stroke();
+    g.strokeStyle = dark ? 'rgba(242,242,243,.5)' : 'rgba(29,31,32,.5)';
+    g.lineWidth = 1.5;
+    g.strokeRect(M.ox, M.oy, M.aw * M.sc, M.ah * M.sc);
+    g.font = "600 8px 'Barlow Condensed', sans-serif";
+    g.fillStyle = dark ? 'rgba(242,242,243,.5)' : 'rgba(29,31,32,.5)';
+    g.textBaseline = 'top';
+    const axl = M.v === 'plan' ? ['X \u2192', 'Y \u2193'] : M.v === 'elevN' ? ['X \u2192', 'Z \u2191'] : ['Y \u2192', 'Z \u2191'];
+    g.fillText(axl[0], M.ox, M.oy + M.ah * M.sc + 4);
+    g.fillText(axl[1], 3, M.oy);
+    for (const d of this.devices()) {
+      const p = M.to(d), selected = d.id === S.sel;
+      g.globalAlpha = d.on ? 1 : 0.4;
+      g.fillStyle = d.col; g.strokeStyle = d.col;
+      const r = selected ? 6 : 4.5;
+      g.fillRect(p[0] - r, p[1] - r, r * 2, r * 2);
+      if (selected) {
+        g.globalAlpha = 1; g.lineWidth = 1;
+        g.setLineDash([3, 3]);
+        g.strokeRect(p[0] - r - 4, p[1] - r - 4, (r + 4) * 2, (r + 4) * 2);
+        g.setLineDash([]);
+        g.font = "600 8.5px 'Barlow Condensed', sans-serif";
+        g.fillStyle = d.col;
+        g.fillText(d.label, Math.min(p[0] + r + 6, cw - 62), p[1] - 5);
+      }
+      g.globalAlpha = 1;
+    }
+  }
+
+  edHit(px, py) {
+    const M = this.edMap();
+    let best = null, bd = 16 * 16;
+    for (const d of this.devices()) {
+      const p = M.to(d), dd = (p[0] - px) * (p[0] - px) + (p[1] - py) * (p[1] - py);
+      if (dd < bd) { bd = dd; best = d; }
+    }
+    return best;
+  }
+
+  applyDrag(id, a, b) {
+    const S = this.state, v = S.edView;
+    const d = this.devices().find((x) => x.id === id); if (!d) return;
+    const cl = (x, lo, hi) => Math.max(lo, Math.min(hi, Math.round(x * 4) / 4));
+    const upd = {};
+    if (v === 'plan') {
+      if (d.wall) {
+        const L = this.wallLen(d.wall);
+        upd[id + 'Along'] = cl((d.wall === 'W' || d.wall === 'E') ? b : a, 1.4, L - 1.4);
+      } else {
+        upd[id + 'X'] = cl(a, 1, S.W - 1); upd[id + 'Y'] = cl(b, 1, S.D - 1);
+      }
+    } else {
+      const horizIsX = v === 'elevN';
+      if (d.wall) {
+        const alongIsHoriz = horizIsX ? (d.wall === 'S' || d.wall === 'N') : (d.wall === 'W' || d.wall === 'E');
+        if (alongIsHoriz) upd[id + 'Along'] = cl(a, 1.4, this.wallLen(d.wall) - 1.4);
+        if (id === 'ac') upd.acHeight = cl(b - 0.7, 0.5, S.H - 1.8);
+        if (id === 'fan') upd.fanZ = cl(b - 0.8, 0.3, S.H - 1.9);
+      } else {
+        upd[id + (horizIsX ? 'X' : 'Y')] = cl(a, 1, (horizIsX ? S.W : S.D) - 1);
+      }
+    }
+    if (Object.keys(upd).length) this.setState(upd);
+  }
+
+  themeGL() {
+    const T = window.THREE; if (!this.renderer) return;
+    const dark = this.state.theme === 'dark';
+    this.renderer.setClearColor(dark ? 0x1d2d3d : 0xf2f2f3, 1);
+    const line = dark ? 0xf2f2f3 : 0x1d1f20;
+    if (this.edges) this.edges.material.color.setHex(line);
+    if (this.grid) this.grid.material.color.setHex(line);
+    if (this.probeStem) this.probeStem.material.color.setHex(line);
+    const stops = dark ? RAMP_DARK : RAMP_LIGHT;
+    const d = this.lut.image.data;
+    for (let i = 0; i < 256; i++) {
+      const c = ramp(stops, TLO + (THI - TLO) * (i / 255));
+      d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255;
+    }
+    this.lut.needsUpdate = true;
+    if (this.volMat) this.volMat.uniforms.uDensity.value = dark ? 1.05 : 0.55;
+    if (this.rampRef.current) {
+      const g = [];
+      for (let i = 0; i <= 8; i++) { const c = ramp(stops, TLO + (THI - TLO) * i / 8); g.push('rgb(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ') ' + (i * 12.5) + '%'); }
+      this.rampRef.current.style.background = 'linear-gradient(90deg,' + g.join(',') + ')';
+    }
+  }
+
+  viewGL() {
+    if (!this.vol) return;
+    const v = this.state.view;
+    this.vol.visible = v === 'volume';
+    this.slice.visible = v === 'slice';
+    this.tracers.visible = v === 'tracers' || v === 'volume';
+    this.arrows.visible = v === 'arrows';
+    this.tracers.material.opacity = v === 'tracers' ? 0.85 : 0.34;
+  }
+
+  resize() {
+    if (!this.renderer) return;
+    const c = this.canvasRef.current, w = c.clientWidth || 900, h = c.clientHeight || 600;
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
+  }
+
+  onDown = (e) => {
+    this._pd = { x: e.clientX, y: e.clientY };
+  };
+
+  tryProbe(e) {
+    const T = window.THREE; if (!T || !this.camera) return;
+    const c = this.canvasRef.current, r = c.getBoundingClientRect();
+    const ndc = new T.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    const rc = new T.Raycaster(); rc.setFromCamera(ndc, this.camera);
+    const S = this.state;
+    const pl = new T.Plane(new T.Vector3(0, 1, 0), 0);
+    const pt = new T.Vector3();
+    if (!rc.ray.intersectPlane(pl, pt)) return;
+    const x = pt.x + S.W / 2, y = pt.z + S.D / 2;
+    if (x < 0 || x > S.W || y < 0 || y > S.D) return;
+    this.probe = { x, y, z: Math.min(S.H - 1, 5.2) };
+  }
+
+  // ── loop ──────────────────────────────────────────────────────────────
+  tick() {
+    const T = window.THREE, S = this.state;
+    this.syncGL();
+    const iters = 20, sub = Math.max(1, Math.round(this.props.simSpeed ?? 2));
+    if (!this.run) { for (let s = 0; s < sub; s++) this.step(1 / 30, iters); this.moveParts(sub / 30); }
+    else this.advanceRun();
+    this.drawGL();
+    if (this.state.tab === 'place') this.drawEd();
+    if (++this.frame % 10 === 0) this.readout();
+  }
+
+  drawGL() {
+    const T = window.THREE; if (!this.renderer) return;
+    const S = this.state, { NX, NY, NZ, f } = this.g, F = this.F;
+    const R = Math.max(S.W, S.D, S.H);
+    const d = R * 2.0 * this.orbit.dist;
+    const ce = Math.cos(this.orbit.el);
+    this.camera.position.set(Math.cos(this.orbit.az) * ce * d, Math.sin(this.orbit.el) * d + S.H * 0.45, Math.sin(this.orbit.az) * ce * d);
+    this.camera.lookAt(0, S.H * 0.42, 0);
+
+    const inv = 255 / (THI - TLO);
+    if (S.view === 'volume') {
+      const dat = this.field3.image.data;
+      for (let c = 0; c < dat.length; c++) {
+        let t = (F.T[c] - TLO) * inv;
+        dat[c] = t < 0 ? 0 : t > 255 ? 255 : t;
+      }
+      this.field3.needsUpdate = true;
+      const cp = this.vol.worldToLocal(this.camera.position.clone());
+      this.volMat.uniforms.uCam.value.copy(cp);
+      this.volMat.uniforms.uMid.value = (74 - TLO) / (THI - TLO);
+    }
+
+    if (S.view === 'slice') this.updateSlice();
+    if (S.view === 'tracers' || S.view === 'volume') this.updateTracers();
+    if (S.view === 'arrows') this.updateArrows();
+    this.updateSun();
+
+    const P = this.probe;
+    this.probeDot.position.set(P.x - S.W / 2, P.z, P.y - S.D / 2);
+    const pos = this.probeStem.geometry.attributes.position;
+    pos.setXYZ(0, P.x - S.W / 2, 0, P.y - S.D / 2);
+    pos.setXYZ(1, P.x - S.W / 2, P.z, P.y - S.D / 2);
+    pos.needsUpdate = true;
+
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  updateTracers() {
+    const T = window.THREE, S = this.state, { NX, NY, NZ, f } = this.g, F = this.F, P = this.P;
+    const pos = this.tracers.geometry.attributes.position.array;
+    const col = this.tracers.geometry.attributes.color.array;
+    const stops = this.state.theme === 'dark' ? RAMP_DARK : RAMP_LIGHT;
+    for (let i = 0; i < P.n; i++) {
+      const x = (P.x[i] - 1) * f, y = (P.y[i] - 1) * f, z = (P.z[i] - 1) * f;
+      const uu = this.smp(F.u, P.x[i], P.y[i], P.z[i]) * f * 0.16;
+      const vv = this.smp(F.v, P.x[i], P.y[i], P.z[i]) * f * 0.16;
+      const ww = this.smp(F.w, P.x[i], P.y[i], P.z[i]) * f * 0.16;
+      const o = i * 6;
+      pos[o] = x - S.W / 2; pos[o + 1] = z; pos[o + 2] = y - S.D / 2;
+      pos[o + 3] = x + uu - S.W / 2; pos[o + 4] = z + ww; pos[o + 5] = y + vv - S.D / 2;
+      const c = ramp(stops, this.smp(F.T, P.x[i], P.y[i], P.z[i]));
+      const r = c[0] / 255, g2 = c[1] / 255, b = c[2] / 255;
+      col[o] = r; col[o + 1] = g2; col[o + 2] = b;
+      col[o + 3] = r; col[o + 4] = g2; col[o + 5] = b;
+    }
+    this.tracers.geometry.attributes.position.needsUpdate = true;
+    this.tracers.geometry.attributes.color.needsUpdate = true;
+  }
+
+  updateArrows() {
+    const S = this.state, { f } = this.g, F = this.F, L = this.lat;
+    const pos = this.arrows.geometry.attributes.position.array;
+    const col = this.arrows.geometry.attributes.color.array;
+    const stops = this.state.theme === 'dark' ? RAMP_DARK : RAMP_LIGHT;
+    for (let a = 0; a < L.n; a++) {
+      const i = L.i[a], j = L.j[a], k = L.k[a], c = this.at(i, j, k);
+      const x = (i - 1) * f - S.W / 2, y = (j - 1) * f - S.D / 2, z = (k - 1) * f;
+      const sc = f * 1.7;
+      const o = a * 6;
+      pos[o] = x; pos[o + 1] = z; pos[o + 2] = y;
+      pos[o + 3] = x + F.u[c] * sc; pos[o + 4] = z + F.w[c] * sc; pos[o + 5] = y + F.v[c] * sc;
+      const cc = ramp(stops, F.T[c]);
+      col[o] = cc[0] / 255 * 0.35; col[o + 1] = cc[1] / 255 * 0.35; col[o + 2] = cc[2] / 255 * 0.35;
+      col[o + 3] = cc[0] / 255; col[o + 4] = cc[1] / 255; col[o + 5] = cc[2] / 255;
+    }
+    this.arrows.geometry.attributes.position.needsUpdate = true;
+    this.arrows.geometry.attributes.color.needsUpdate = true;
+  }
+
+  updateSun() {
+    const S = this.state; if (!this.sunWin) return;
+    this.sunWin.visible = S.sunGlaze !== 'none';
+    const horiz = S.sunWall === 'W' || S.sunWall === 'E';
+    const p = S.sunWall === 'W' ? [0.25, S.sunAlong] : S.sunWall === 'E' ? [S.W - 0.25, S.sunAlong]
+      : S.sunWall === 'S' ? [S.sunAlong, 0.25] : [S.sunAlong, S.D - 0.25];
+    this.sunWin.scale.set(horiz ? 0.4 : 4, 3.5, horiz ? 4 : 0.4);
+    this.sunWin.position.set(p[0] - S.W / 2, Math.min(S.H - 1.9, 4.2), p[1] - S.D / 2);
+    const sol = this.solar();
+    this.sunPatch.visible = !!sol;
+    if (sol) {
+      this.sunPatch.scale.set(sol.rx * 2, sol.ry * 2, 1);
+      this.sunPatch.position.set(sol.cx - S.W / 2, 0.05, sol.cy - S.D / 2);
+      this.sunPatch.material.opacity = 0.16 + 0.26 * sol.cosInc;
+    }
+  }
+
+  updateSlice() {
+    const T = window.THREE, S = this.state, { NX, NY, NZ } = this.g, F = this.F;
+    const ax = S.sliceAxis, stops = S.theme === 'dark' ? RAMP_DARK : RAMP_LIGHT;
+    const iw = NX - 2, idp = NY - 2, ih = NZ - 2;
+    // Data row 0 lands at UV v=0 (the plane's local -y edge), so the room axis that
+    // maps to local +y must be written in reverse — otherwise depth comes out mirrored.
+    let wpx, hpx, fill;
+    if (ax === 'Z') {
+      wpx = iw; hpx = idp;
+      const k = Math.max(1, Math.min(NZ - 2, Math.round(S.sliceAt * ih)));
+      fill = (col, row) => F.T[this.at(col + 1, (hpx - 1 - row) + 1, k)];
+    } else if (ax === 'X') {
+      wpx = idp; hpx = ih;
+      const i = Math.max(1, Math.min(NX - 2, Math.round(S.sliceAt * iw)));
+      fill = (col, row) => F.T[this.at(i, (wpx - 1 - col) + 1, row + 1)];
+    } else {
+      wpx = iw; hpx = ih;
+      const j = Math.max(1, Math.min(NY - 2, Math.round(S.sliceAt * idp)));
+      fill = (col, row) => F.T[this.at(col + 1, j, row + 1)];
+    }
+    if (!this.sliceTex || this.sliceTex.image.width !== wpx || this.sliceTex.image.height !== hpx) {
+      if (this.sliceTex) this.sliceTex.dispose();
+      this.sliceTex = new T.DataTexture(new Uint8Array(wpx * hpx * 4), wpx, hpx);
+      this.sliceTex.minFilter = this.sliceTex.magFilter = T.LinearFilter;
+      this.slice.material.map = this.sliceTex;
+      this.slice.material.needsUpdate = true;
+    }
+    const d = this.sliceTex.image.data;
+    for (let row = 0; row < hpx; row++) for (let col = 0; col < wpx; col++) {
+      const c = ramp(stops, fill(col, row)), o = (col + row * wpx) * 4;
+      d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 232;
+    }
+    this.sliceTex.needsUpdate = true;
+    const key = ax + '|' + S.W + '|' + S.D + '|' + S.H;
+    if (this._sliceKey !== key) {
+      this._sliceKey = key;
+      this.slice.geometry.dispose();
+      if (ax === 'Z') { this.slice.geometry = new T.PlaneGeometry(S.W, S.D); this.slice.rotation.set(-Math.PI / 2, 0, 0); }
+      else if (ax === 'X') { this.slice.geometry = new T.PlaneGeometry(S.D, S.H); this.slice.rotation.set(0, Math.PI / 2, 0); }
+      else { this.slice.geometry = new T.PlaneGeometry(S.W, S.H); this.slice.rotation.set(0, 0, 0); }
+    }
+    if (ax === 'Z') this.slice.position.set(0, Math.max(0.06, S.sliceAt * S.H), 0);
+    else if (ax === 'X') this.slice.position.set(S.sliceAt * S.W - S.W / 2, S.H / 2, 0);
+    else this.slice.position.set(0, S.H / 2, S.sliceAt * S.D - S.D / 2);
+  }
+
+  // ── 4-hour run: frozen flow, temperature only ─────────────────────────
+  startRun = () => {
+    if (this.run) { this.run = null; this.setState({ run: null }); return; }
+    this.run = { step: 0, total: 720, dt: 20, mean: [], probe: [] };
+    this.setState({ run: 0 });
+  };
+
+  advanceRun() {
+    const R = this.run; if (!R) return;
+    const { NX, NY, NZ } = this.g, F = this.F;
+    const chunk = 24;
+    for (let s = 0; s < chunk && R.step < R.total; s++, R.step++) {
+      this.thermal(R.dt, true);
+      if (R.step % 6 === 0) {
+        let sum = 0, cnt = 0;
+        for (let k = 1; k < NZ - 1; k++) for (let j = 1; j < NY - 1; j++) {
+          let c = 1 + NX * (j + NY * k);
+          for (let i = 1; i < NX - 1; i++, c++) { sum += F.T[c]; cnt++; }
+        }
+        R.mean.push(sum / cnt);
+        R.probe.push(this.probeTemp());
+      }
+    }
+    if (R.step >= R.total) {
+      this.setState({ run: 1, chart: { mean: R.mean.slice(), probe: R.probe.slice() } });
+      this.run = null;
+    } else if (R.step % 96 < chunk) this.setState({ run: R.step / R.total });
+  }
+
+  probeTemp() {
+    const { f } = this.g, P = this.probe;
+    return this.smp(this.F.T, P.x / f + 1, P.y / f + 1, P.z / f + 1);
+  }
+
+  readout() {
+    const { NX, NY, NZ, f } = this.g, F = this.F, S = this.state;
+    let sum = 0, cnt = 0, lo = 0, loN = 0, hi = 0, hiN = 0;
+    const bandK = Math.max(1, Math.round((NZ - 2) * 0.18));
+    for (let k = 1; k < NZ - 1; k++) for (let j = 1; j < NY - 1; j++) {
+      let c = 1 + NX * (j + NY * k);
+      for (let i = 1; i < NX - 1; i++, c++) {
+        const t = F.T[c]; sum += t; cnt++;
+        if (k <= bandK) { lo += t; loN++; }
+        if (k >= NZ - 2 - bandK) { hi += t; hiN++; }
+      }
+    }
+    let flow = 0;
+    for (const c of this.openCells) {
+      const inner = this.innerOf(c); if (inner < 0) continue;
+      const i = c % NX, rest = (c - i) / NX, j = rest % NY, k = (rest - j) / NY;
+      let vn = 0;
+      if (i === 0) vn = F.u[inner]; else if (i === NX - 1) vn = -F.u[inner];
+      else if (j === 0) vn = F.v[inner]; else if (j === NY - 1) vn = -F.v[inner];
+      else if (k === 0) vn = F.w[inner]; else vn = -F.w[inner];
+      if (vn > 0) flow += vn * f * f * f;
+    }
+    const ach = flow * 3600 / (S.W * S.D * S.H);
+    const C = S.unit === 'C';
+    const t = (x) => C ? ((x - 32) * 5 / 9).toFixed(1) + '\u00b0' : Math.round(x) + '\u00b0';
+    const dt = (x) => (x >= 0 ? '+' : '\u2212') + (C ? (Math.abs(x) * 5 / 9).toFixed(1) : Math.abs(x).toFixed(1)) + '\u00b0';
+    const set = (r, v) => { if (r.current) r.current.textContent = v; };
+    set(this.meanRef, t(sum / cnt));
+    set(this.probeRef, t(this.probeTemp()));
+    set(this.spreadRef, dt(hi / hiN - lo / loN));
+    set(this.achRef, ach.toFixed(1));
+    const sol = this.solar();
+    set(this.solarRef, sol ? Math.round(sol.watts) + ' W' : 'none');
+    set(this.statRef, this.g.NX + ' \u00d7 ' + this.g.NY + ' \u00d7 ' + this.g.NZ + ' CELLS \u00b7 ' + (f * 12).toFixed(1) + ' IN');
+    if (this.runRef.current) {
+      const R = this.state.run;
+      this.runRef.current.textContent = this.run ? Math.round((this.run.step / this.run.total) * 100) + '%' : (R === 1 ? 'complete' : 'not run');
+    }
+  }
+
+  path(arr, lo, hi) {
+    if (!arr || arr.length < 2) return '';
+    const n = arr.length, span = Math.max(0.5, hi - lo);
+    let d = '';
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * 166 + 1;
+      const y = 54 - ((arr[i] - lo) / span) * 52;
+      d += (i ? 'L' : 'M') + x.toFixed(1) + ' ' + Math.max(1, Math.min(55, y)).toFixed(1) + ' ';
+    }
+    return d;
+  }
+
+  renderVals() {
+    const S = this.state;
+    const num = (e) => parseFloat(e.target.value);
+    const dv = (e) => e.currentTarget.dataset.v;
+    const ch = S.chart;
+    let lo = 60, hi = 90;
+    if (ch) {
+      const all = ch.mean.concat(ch.probe);
+      lo = Math.min.apply(null, all) - 1; hi = Math.max.apply(null, all) + 1;
+    }
+    const C = S.unit === 'C';
+    const dg = (x) => C ? Math.round((x - 32) * 5 / 9) + '\u00b0C' : x + '\u00b0F';
+    const sliceFt = S.sliceAxis === 'Z' ? S.sliceAt * S.H : S.sliceAxis === 'X' ? S.sliceAt * S.W : S.sliceAt * S.D;
+    const sel = this.devices ? this.devices().find((d) => d.id === S.sel) : null;
+    const ft = (x) => x === undefined ? '\u2014' : x.toFixed(1) + '\u2032';
+    const lockNote = !sel ? '' : sel.wall
+      ? 'HELD ON THE ' + sel.wall + ' WALL \u2014 ' + (S.edView === 'plan' ? 'SWITCH TO AN ELEVATION TO SET HEIGHT' : 'SWITCH TO PLAN TO SLIDE IT ALONG THE WALL')
+      : (S.edView === 'plan' ? 'FREE IN X AND Y' : 'THIS PROJECTION SETS ' + (S.edView === 'elevN' ? 'X' : 'Y') + ' ONLY');
+    const canZ = sel && (sel.id === 'ac' || sel.id === 'fan');
+    return {
+      theme: S.theme, canvasRef: this.canvasRef, edRef: this.edRef,
+      tabSetup: S.tab === 'setup', tabPlace: S.tab === 'place',
+      edPlan: S.edView === 'plan', edElevN: S.edView === 'elevN', edElevE: S.edView === 'elevE',
+      selLabel: sel ? sel.label : '\u2014',
+      selX: ft(sel && sel.x), selY: ft(sel && sel.y), selZ: ft(sel && sel.z),
+      selLock: lockNote, halfH: (S.H / 2).toFixed(1) + '\u2032',
+      selZFrac: sel ? Math.max(0, Math.min(1, sel.z / S.H)) : 0.5,
+      setTab: (e) => this.setState({ tab: dv(e) }),
+      setEdView: (e) => this.setState({ edView: dv(e) }),
+      setSelZ: (e) => {
+        if (!canZ) return;
+        const z = num(e) * S.H;
+        if (sel.id === 'ac') this.setState({ acHeight: Math.max(0.5, Math.min(S.H - 1.8, Math.round((z - 0.7) * 4) / 4)) });
+        else this.setState({ fanZ: Math.max(0.3, Math.min(S.H - 1.9, Math.round((z - 0.8) * 4) / 4)) });
+      },
+      edDown: (e) => {
+        const cv = this.edRef.current; if (!cv) return;
+        const r = cv.getBoundingClientRect();
+        const px = e.clientX - r.left, py = e.clientY - r.top;
+        const hit = this.edHit(px, py);
+        if (hit) this.setState({ sel: hit.id });
+        const id = hit ? hit.id : null;
+        const M = this.edMap();
+        const move = (ev) => {
+          if (!id) return;
+          const q = M.from(ev.clientX - r.left, ev.clientY - r.top);
+          this.applyDrag(id, q.a, q.b);
+        };
+        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+      },
+      solarRef: this.solarRef,
+      meanRef: this.meanRef, probeRef: this.probeRef, spreadRef: this.spreadRef,
+      achRef: this.achRef, runRef: this.runRef, rampRef: this.rampRef, statRef: this.statRef,
+      W: S.W, D: S.D, H: S.H, outdoor: S.outdoor,
+      acSupply: S.acSupply, acHeight: S.acHeight, acCfm: S.acCfm, fanCfm: S.fanCfm,
+      ceilCfm: S.ceilCfm, loadW: S.loadW, sliceAt: S.sliceAt,
+      acLabel: S.acCfm > 40 ? S.acCfm + ' CFM \u00b7 ' + bandName(AC_BANDS, S.acCfm) : 'OFF',
+      fanLabel: S.fanCfm > 80 ? S.fanCfm + ' CFM \u00b7 ' + bandName(BOX_BANDS, S.fanCfm) : 'OFF',
+      sliceLabel: S.sliceAxis + ' ' + sliceFt.toFixed(1) + ' FT',
+      rampLo: dg(TLO), rampHi: dg(THI),
+      acW: S.acWall === 'W', acE: S.acWall === 'E', acS: S.acWall === 'S', acN: S.acWall === 'N',
+      fnW: S.fanWall === 'W', fnE: S.fanWall === 'E', fnS: S.fanWall === 'S', fnN: S.fanWall === 'N',
+      fdShut: S.fanDir === 'shut', fdOpen: S.fanDir === 'open', fdOut: S.fanDir === 'out', fdIn: S.fanDir === 'in',
+      drS: S.doorWall === 'S', drN: S.doorWall === 'N', drW: S.doorWall === 'W', drE: S.doorWall === 'E', drNone: S.doorWall === 'none',
+      snW: S.sunWall === 'W', snE: S.sunWall === 'E', snS: S.sunWall === 'S', snN: S.sunWall === 'N',
+      gzNone: S.sunGlaze === 'none', gzClear: S.sunGlaze === 'clear', gzShaded: S.sunGlaze === 'shaded',
+      sunHour: S.sunHour, hourLabel: hourText(S.sunHour),
+      setSunWall: (e) => { const w = dv(e); this.setState({ sunWall: w, sunAlong: Math.min(S.sunAlong, this.wallLen(w) - 2.2) }); },
+      setSunGlaze: (e) => this.setState({ sunGlaze: dv(e) }),
+      setSunHour: (e) => this.setState({ sunHour: num(e) }),
+      vVol: S.view === 'volume', vSlice: S.view === 'slice', vTrace: S.view === 'tracers', vArrow: S.view === 'arrows',
+      sZ: S.sliceAxis === 'Z', sX: S.sliceAxis === 'X', sY: S.sliceAxis === 'Y',
+      tLight: S.theme === 'light', tDark: S.theme === 'dark',
+      uF: S.unit === 'F', uC: S.unit === 'C',
+      chartMean: ch ? this.path(ch.mean, lo, hi) : '',
+      chartProbe: ch ? this.path(ch.probe, lo, hi) : '',
+      runLabel: this.run ? 'CANCEL RUN' : 'RUN 4 HOURS',
+      startRun: this.startRun,
+      setW: (e) => this.setState({ W: Math.max(6, num(e)) }),
+      setD: (e) => this.setState({ D: Math.max(6, num(e)) }),
+      setH: (e) => this.setState({ H: Math.max(6, num(e)) }),
+      setOutdoor: (e) => this.setState({ outdoor: num(e) }),
+      setAcWall: (e) => { const w = dv(e); this.setState({ acWall: w, acAlong: Math.min(S.acAlong, this.wallLen(w) - 1.4) }); },
+      setAcSupply: (e) => this.setState({ acSupply: num(e) }),
+      setAcHeight: (e) => this.setState({ acHeight: num(e) }),
+      setAcCfm: (e) => this.setState({ acCfm: num(e) }),
+      setFanWall: (e) => { const w = dv(e); this.setState({ fanWall: w, fanAlong: Math.min(S.fanAlong, this.wallLen(w) - 1.4) }); },
+      setFanDir: (e) => this.setState({ fanDir: dv(e) }),
+      setFanCfm: (e) => this.setState({ fanCfm: num(e) }),
+      setDoorWall: (e) => { const w = dv(e); this.setState({ doorWall: w, doorAlong: w === 'none' ? S.doorAlong : Math.min(S.doorAlong, this.wallLen(w) - 1.6) }); },
+      setCeilCfm: (e) => this.setState({ ceilCfm: num(e) }),
+      setLoadW: (e) => this.setState({ loadW: num(e) }),
+      setView: (e) => this.setState({ view: dv(e) }),
+      setSliceAxis: (e) => this.setState({ sliceAxis: dv(e) }),
+      setSliceAt: (e) => this.setState({ sliceAt: num(e) }),
+      setTheme: (e) => this.setState({ theme: dv(e) }),
+      setUnit: (e) => this.setState({ unit: dv(e) }),
+      onDown: (e) => {
+        this._pd = { x: e.clientX, y: e.clientY, t: Date.now() };
+        const up = (ev) => {
+          window.removeEventListener('pointerup', up);
+          if (Math.abs(ev.clientX - this._pd.x) + Math.abs(ev.clientY - this._pd.y) < 5) this.tryProbe(ev);
+        };
+        window.addEventListener('pointerup', up);
+      }
+    };
+  }
+}
+
+</script>
+</body>
+</html>

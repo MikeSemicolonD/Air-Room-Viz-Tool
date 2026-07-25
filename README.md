@@ -33,16 +33,6 @@ buoyancy, an eddy-diffusion stand-in for turbulence, heat stored in the surfaces
 simple psychrometrics. Real airflow wants much finer cells and real turbulence
 modelling, so read the numbers as directional, not as a load calculation.
 
-## Running it locally
-
-Any static file server works. Everything but the fonts is vendored:
-
-```sh
-python -m http.server
-```
-
-Then open <http://localhost:8000/>.
-
 `index.html` is the whole tool — markup, solver, and renderer. `support.js` is the
 Claude Design runtime that renders the template, and `vendor/` holds three.js and
 React.

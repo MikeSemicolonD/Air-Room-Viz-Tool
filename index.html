@@ -588,7 +588,7 @@ textarea.input { min-height: 90px; resize: vertical; }
         <button type="button" data-v="volume" aria-pressed="{{ vVol }}" onClick="{{ setView }}" style="padding:4px 9px;font-size:11px">VOLUME</button>
         <button type="button" data-v="slice" aria-pressed="{{ vSlice }}" onClick="{{ setView }}" style="padding:4px 9px;font-size:11px">SLICE</button>
         <button type="button" data-v="tracers" aria-pressed="{{ vTrace }}" onClick="{{ setView }}" style="padding:4px 9px;font-size:11px">TRACERS</button>
-        <button type="button" data-v="arrows" aria-pressed="{{ vArrow }}" onClick="{{ setView }}" style="padding:4px 9px;font-size:11px">ARROWS</button>
+        <button type="button" data-v="arrows" aria-pressed="{{ vArrow }}" onClick="{{ setView }}" style="padding:4px 9px;font-size:11px">VECTORS</button>
       </span>
       <sc-if value="{{ vSlice }}" hint-placeholder-val="{{ false }}">
         <span class="sg" style="flex:none">
@@ -2366,6 +2366,7 @@ class Component extends DCLogic {
     const S = this.state, { f } = this.g, F = this.F, P = this.P;
     const pos = this.tracers.geometry.attributes.position.array, col = this.tracers.geometry.attributes.color.array;
     const stops = S.theme === 'dark' ? RAMP_DARK : RAMP_LIGHT;
+    const flat = S.view === 'tracers';
     for (let i = 0; i < P.n; i++) {
       const x = (P.x[i] - 1) * f, y = (P.y[i] - 1) * f, z = (P.z[i] - 1) * f;
       const uu = this.smp(F.u, P.x[i], P.y[i], P.z[i]) * f * 0.16;
@@ -2375,7 +2376,9 @@ class Component extends DCLogic {
       pos[o] = x - S.W / 2; pos[o + 1] = z; pos[o + 2] = y - S.D / 2;
       pos[o + 3] = x + uu - S.W / 2; pos[o + 4] = z + ww; pos[o + 5] = y + vv - S.D / 2;
       const tv = this.smp(F.T, P.x[i], P.y[i], P.z[i]);
-      const c = ramp(stops, tv), a = this.devA(tv), bg = this._bg || [0, 0, 0];
+      // in TRACERS view the falloff only fades the streaks out, so hold them at
+      // full colour; over the volume haze it still earns its keep
+      const c = ramp(stops, tv), a = flat ? 1 : this.devA(tv), bg = this._bg || [0, 0, 0];
       const r = bg[0] + (c[0] / 255 - bg[0]) * a, g = bg[1] + (c[1] / 255 - bg[1]) * a, b = bg[2] + (c[2] / 255 - bg[2]) * a;
       col[o] = r; col[o + 1] = g; col[o + 2] = b; col[o + 3] = r; col[o + 4] = g; col[o + 5] = b;
     }
@@ -2393,7 +2396,9 @@ class Component extends DCLogic {
       const solid = F.type[c] === 1;
       pos[o] = x; pos[o + 1] = z; pos[o + 2] = y;
       pos[o + 3] = solid ? x : x + F.u[c] * sc; pos[o + 4] = solid ? z : z + F.w[c] * sc; pos[o + 5] = solid ? y : y + F.v[c] * sc;
-      const cc = ramp(stops, F.T[c]), aa = this.devA(F.T[c]), bg = this._bg || [0, 0, 0];
+      // no opacity falloff here either — a vector you cannot see tells you
+      // nothing. The dimmer tail is kept: it reads as flow direction.
+      const cc = ramp(stops, F.T[c]), aa = 1, bg = this._bg || [0, 0, 0];
       col[o] = bg[0] + (cc[0] / 255 - bg[0]) * aa * 0.35; col[o + 1] = bg[1] + (cc[1] / 255 - bg[1]) * aa * 0.35; col[o + 2] = bg[2] + (cc[2] / 255 - bg[2]) * aa * 0.35;
       col[o + 3] = bg[0] + (cc[0] / 255 - bg[0]) * aa; col[o + 4] = bg[1] + (cc[1] / 255 - bg[1]) * aa; col[o + 5] = bg[2] + (cc[2] / 255 - bg[2]) * aa;
     }

@@ -3,14 +3,310 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Air Room Temperature Flow Simulation</title>
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<!-- React ahead of support.js: the runtime's loadReactUmd() early-returns when
+     window.React and window.ReactDOM already exist, so it never reaches unpkg -->
+<script src="./vendor/react.production.min.js"></script>
+<script src="./vendor/react-dom.production.min.js"></script>
 <script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
 <helmet>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="_ds/industry-f6e232aa-9b3b-4ce5-b21d-1845bee1682e/styles.css">
-<script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700&amp;family=Barlow+Condensed:wght@400;600&amp;display=swap">
+<style>
+/* Industry design system — inlined verbatim from the Claude Design export
+   (_ds/industry-f6e232aa.../styles.css) so the page carries no _ds/ dependency.
+   Its Google Fonts @import is the <link> above instead, which fetches in
+   parallel rather than waiting on this stylesheet to parse. Retune here. */
+:root {
+  --color-bg: #f2f2f3;
+  --color-surface: #e9e9ea;
+  --color-text: #1d1f20;
+  --color-accent: #5980a6;
+  --color-accent-2: #728fab;
+  --color-divider: color-mix(in srgb, #1d1f20 16%, transparent);
+
+  /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
+     same step of any role matches the others in visual value. */
+  --color-neutral-100: #f5f5f8;
+  --color-neutral-200: #e7e7ea;
+  --color-neutral-300: #d4d4d7;
+  --color-neutral-400: #b7b7ba;
+  --color-neutral-500: #98989b;
+  --color-neutral-600: #7a7a7d;
+  --color-neutral-700: #5d5d60;
+  --color-neutral-800: #424244;
+  --color-neutral-900: #2b2b2d;
+
+  --color-accent-100: #eef6ff;
+  --color-accent-200: #d6ebff;
+  --color-accent-300: #b5d9fd;
+  --color-accent-400: #94bce3;
+  --color-accent-500: #749dc4;
+  --color-accent-600: #597ea3;
+  --color-accent-700: #416180;
+  --color-accent-800: #2c455d;
+  --color-accent-900: #1d2d3d;
+
+  --color-accent-2-100: #eef6ff;
+  --color-accent-2-200: #d6ebff;
+  --color-accent-2-300: #bdd8f2;
+  --color-accent-2-400: #9ebbd8;
+  --color-accent-2-500: #7e9cb8;
+  --color-accent-2-600: #627d98;
+  --color-accent-2-700: #486077;
+  --color-accent-2-800: #314457;
+  --color-accent-2-900: #1f2d3a;
+
+  --font-heading: "Barlow Condensed", system-ui, sans-serif;
+  --font-heading-weight: 600;
+  --font-body: "Barlow", system-ui, sans-serif;
+
+  --space-1: 3.4px;
+  --space-2: 6.8px;
+  --space-3: 10.2px;
+  --space-4: 13.6px;
+  --space-6: 20.4px;
+  --space-8: 27.2px;
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 7px;
+
+  /* Elevation — derived from the ground: soft ink-tinted shadows on a
+     light theme, a hairline edge + ambient darkness on a dark one. */
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2b2b2d 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2b2b2d 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-heading-weight); }
+
+.blueprint {
+  position: relative;
+  border: 1px solid var(--color-divider);
+  border-radius: 0;
+}
+/* The overlay image treatments (halftone, duotone) clip their overlay
+   (overflow:hidden); a blueprint wrapper draws its registration marks
+   outside the box, so when both classes share a wrapper the frame must
+   win. */
+.blueprint.halftone, .blueprint.plate, .blueprint.duotone { overflow: visible; }
+.blueprint > .corner {
+  position: absolute; width: 11px; height: 11px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.blueprint > .corner::before, .blueprint > .corner::after {
+  content: ""; position: absolute; background: currentColor;
+}
+.blueprint > .corner::before { left: 5px; top: 0; width: 1px; height: 100%; }
+.blueprint > .corner::after  { top: 5px; left: 0; width: 100%; height: 1px; }
+.blueprint > .corner.tl { top: -6px; left: -6px; }
+.blueprint > .corner.tr { top: -6px; right: -6px; }
+.blueprint > .corner.bl { bottom: -6px; left: -6px; }
+.blueprint > .corner.br { bottom: -6px; right: -6px; }
+
+.duotone{position:relative;overflow:hidden}
+.duotone::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:var(--color-accent);mix-blend-mode:color}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Components — built with the tokens above. Plain CSS
+   on plain HTML: no JavaScript, no build step. Each class is documented in
+   readme.md and demonstrated in foundations/ and components/.
+   ══════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-size: 15px; line-height: 1.55; font-weight: 400; }
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  line-height: 1.12; letter-spacing: -0.015em; margin: 0 0 var(--space-2);
+}
+h1 { font-size: 42px; }
+h2 { font-size: 32px; }
+h3 { font-size: 25px; }
+h4 { font-size: 20px; }
+h5 { font-size: 16px; }
+h6 { font-size: 13px; }
+h6 { letter-spacing: 0.08em; text-transform: uppercase; }
+p { margin: 0 0 var(--space-3); }
+a { color: var(--color-accent); text-underline-offset: 3px; }
+img { display: block; max-width: 100%; }
+figure { margin: 0; }
+figcaption {
+  font-size: 11px; margin-top: var(--space-1);
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.text-muted { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+
+/* — rules — */
+.hr {
+  height: 1px; border: 0; margin: var(--space-4) 0;
+  background: var(--color-divider);
+}
+
+/* — buttons — */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; text-decoration: none;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 14px; line-height: 1.2; color: var(--color-text); /* matches the .input's 14px —
+     the pair sits side by side in sign-up rows */
+  background: transparent; border: 1px solid transparent;
+  padding: var(--space-2) calc(var(--space-3) * 1.2);
+  border-radius: var(--radius-md);
+}
+.btn svg { display: block; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--color-accent); color: var(--color-bg); }
+.btn-primary:hover { background: var(--color-accent-600); }
+.btn-primary:active { background: var(--color-accent-700); }
+.btn-secondary { border-color: var(--color-divider); }
+.btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
+.btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.btn-icon { width: 36px; height: 36px; padding: 0; }
+.btn-block { width: 100%; margin-top: var(--space-2); }
+
+/* — forms — */
+.field > label {
+  display: block; font-size: 12px; margin-bottom: 5px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.input {
+  width: 100%; min-height: 36px; padding: 6px 10px; font: inherit;
+  font-size: 14px; color: var(--color-text); caret-color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+}
+.input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+.input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+textarea.input { min-height: 90px; resize: vertical; }
+.radio { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.radio input, .seg-opt input {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
+.radio .dot {
+  width: 16px; height: 16px; flex: none; border-radius: 50%;
+  border: 1.5px solid var(--color-divider);
+}
+.radio:hover .dot { border-color: var(--color-accent); }
+.radio input:checked + .dot {
+  border-color: var(--color-accent); background: var(--color-accent);
+  box-shadow: inset 0 0 0 4px var(--color-bg);
+}
+.radio input:focus-visible + .dot { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.seg {
+  display: inline-flex; overflow: hidden;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+}
+.seg-opt {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; font-size: 13px; cursor: pointer;
+}
+.seg-opt + .seg-opt { border-left: 1px solid var(--color-divider); }
+.seg-opt:has(input:checked) { background: var(--color-accent); color: var(--color-bg); }
+.seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.seg-opt:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+/* — cards — */
+.card {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface);
+}
+.card-kicker { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); }
+.card-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 17px; line-height: 1.2;
+}
+.card-body { margin: 0; font-size: 13px; opacity: 0.8; flex: 1; }
+.card-meta {
+  display: flex; align-items: center; gap: 6px; font-size: 11px;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+.elev-sm { box-shadow: var(--shadow-sm); }
+.elev-md { box-shadow: var(--shadow-md); }
+.elev-lg { box-shadow: var(--shadow-lg); }
+
+/* — tags — */
+.tag {
+  display: inline-flex; align-items: center; font-size: 11px;
+  letter-spacing: 0.02em; padding: 3px 10px;
+  border-radius: calc(var(--radius-md) * 0.75);
+}
+.tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); }
+.tag-accent-2 { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
+.tag-neutral { background: var(--color-neutral-100); color: var(--color-neutral-800); }
+.tag-outline { border: 1px solid var(--color-accent); color: var(--color-accent); }
+
+/* — navigation — */
+.nav {
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: none;
+}
+.nav-brand {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 18px; margin-right: auto;
+}
+.nav a { color: inherit; text-decoration: none; font-size: 14px; }
+.nav a:hover, .nav a[aria-current='page'] { color: var(--color-accent); }
+
+/* — tables — */
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th {
+  text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+  padding: var(--space-2); border-bottom: 1px solid var(--color-divider);
+}
+.table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+
+/* — dialog — */
+.dialog-backdrop {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
+}
+.dialog {
+  width: min(440px, 100%); display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-4); border-radius: var(--radius-lg);
+  background: var(--color-surface); box-shadow: var(--shadow-lg);
+}
+.dialog-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 20px;
+}
+.dialog-body { font-size: 14px; opacity: 0.85; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
+
+/* — blueprint frame: components are wireframe objects (see .blueprint
+     and .corner above) — square, transparent, hairline-bordered — */
+.card, .btn, .input, .tag, .seg, .dialog { border-radius: 0; }
+.card, .dialog { background: transparent; border: 1px solid var(--color-divider); }
+.btn { border: 1px solid var(--color-divider); }
+.btn-primary { border-color: var(--color-accent); }
+.btn-ghost { border-color: transparent; }
+</style>
+<script src="./vendor/three.min.js"></script>
 <style>
   :root { --ui-bg: #f2f2f3; --ui-line: rgba(29,31,32,.2); --ui-line-soft: rgba(29,31,32,.1); --ui-text: #1d1f20; --ui-dim: rgba(29,31,32,.52); }
   [data-theme="dark"] { --ui-bg: #1d2d3d; --ui-line: rgba(242,242,243,.24); --ui-line-soft: rgba(242,242,243,.11); --ui-text: #f2f2f3; --ui-dim: rgba(242,242,243,.56); }
@@ -593,7 +889,7 @@ class Component extends DCLogic {
   state = {
     W: 20, D: 12, H: 9, outdoor: 92, leak: 'avg', sunHour: 15,
     objects: defaultScene(), sel: null,
-    tab: 'objects', edView: 'plan', gizmo: 'move',
+    tab: 'objects', gizmo: 'move',
     view: 'volume', sliceAxis: 'Z', sliceAt: 0.58,
     theme: 'dark', unit: 'F', run: null, chart: null, chartOpen: false, slots: [], schedOpen: false, tlOpen: false, events: [],
     roof: 'flat', rise: 3, mass: 'medium', alphaG: 1.35, outRH: 55, swing: 0, runStart: 0,
@@ -602,7 +898,7 @@ class Component extends DCLogic {
 
   constructor(p) {
     super(p);
-    for (const r of ['canvas', 'ed', 'mean', 'probe', 'spread', 'ach', 'solar', 'cool', 'surf', 'rh', 'run', 'ramp', 'stat', 'save', 'chartBox', 'chartCur', 'chartLab', 'chartDotM', 'chartDotP']) this[r + 'Ref'] = React.createRef();
+    for (const r of ['canvas', 'mean', 'probe', 'spread', 'ach', 'solar', 'cool', 'surf', 'rh', 'run', 'ramp', 'stat', 'save', 'chartBox', 'chartCur', 'chartLab', 'chartDotM', 'chartDotP']) this[r + 'Ref'] = React.createRef();
     this._bg = [29 / 255, 45 / 255, 61 / 255];
     this.frame = 0;
     // the first render happens before componentDidMount, and it reads the scene
@@ -618,8 +914,13 @@ class Component extends DCLogic {
       const sl = localStorage.getItem('roomsim.slots');
       if (sl) st.slots = JSON.parse(sl) || [];
     } catch (e) { /* first run */ }
+    // build() and initGL run synchronously below and read this.state, so the
+    // restored scene has to be in place before them — but React still needs a
+    // real setState, or the panels keep rendering the defaults until the first
+    // unrelated interaction
     this.state = Object.assign({}, this.state, st);
     this.build();
+    this.setState(st);
     this.loop = () => { this.tick(); this.raf = requestAnimationFrame(this.loop); };
     const wait = () => { if (window.THREE) { this.initGL(); this.raf = requestAnimationFrame(this.loop); } else setTimeout(wait, 60); };
     wait();
@@ -672,11 +973,19 @@ class Component extends DCLogic {
   }
   fromSave(d) {
     // merge over the kind's defaults so scenes saved before a field existed still carry it
-    const objs = (d.objects || []).filter((o) => KINDS[o.kind]).map((o) => Object.assign({}, o, {
-      uid: 'o' + (UID++),
-      p: Object.assign({}, KINDS[o.kind].def, o.p || {})
-    }));
-    return { W: d.W || 20, D: d.D || 12, H: d.H || 9, outdoor: d.outdoor ?? 92, leak: d.leak || 'avg', sunHour: d.sunHour ?? 15, objects: objs.length ? objs : defaultScene(), sel: null, events: (d.events || []).slice(), roof: d.roof || 'flat', rise: d.rise ?? 3, mass: d.mass || 'medium', alphaG: d.alphaG ?? 1.35, outRH: d.outRH ?? 55, swing: d.swing ?? 0, runStart: d.runStart ?? 0, qual: d.qual || null, speed: d.speed ?? null, tracers: d.tracers ?? null, iters: d.iters ?? 20, mixK: d.mixK ?? 0.3, haze: d.haze ?? null, buoy: d.buoy !== false };
+    const idMap = {};
+    const objs = (d.objects || []).filter((o) => KINDS[o.kind]).map((o) => {
+      const uid = 'o' + (UID++);
+      if (o.uid) idMap[o.uid] = uid;
+      return Object.assign({}, o, { uid, p: Object.assign({}, KINDS[o.kind].def, o.p || {}) });
+    });
+    // uids are reissued on load, so the saved timeline has to be remapped onto
+    // them — otherwise every event points at an object that no longer exists
+    const events = objs.length ? (d.events || [])
+      .filter((e) => e && idMap[e.uid])
+      .map((e) => Object.assign({}, e, { id: 'e' + (UID++), uid: idMap[e.uid] }))
+      .sort((a, b) => a.hour - b.hour) : [];
+    return { W: d.W || 20, D: d.D || 12, H: d.H || 9, outdoor: d.outdoor ?? 92, leak: d.leak || 'avg', sunHour: d.sunHour ?? 15, objects: objs.length ? objs : defaultScene(), sel: null, events, roof: d.roof || 'flat', rise: d.rise ?? 3, mass: d.mass || 'medium', alphaG: d.alphaG ?? 1.35, outRH: d.outRH ?? 55, swing: d.swing ?? 0, runStart: d.runStart ?? 0, qual: d.qual || null, speed: d.speed ?? null, tracers: d.tracers ?? null, iters: d.iters ?? 20, mixK: d.mixK ?? 0.3, haze: d.haze ?? null, buoy: d.buoy !== false };
   }
   persist() { try { localStorage.setItem('roomsim.last', JSON.stringify(this.toSave())); } catch (e) { /* quota */ } }
   note(msg) { if (this.saveRef.current) this.saveRef.current.textContent = msg; }
@@ -795,10 +1104,13 @@ class Component extends DCLogic {
     // one backing buffer for the whole field: better locality in the hot loops,
     // and a single transferable object when the solver moves off-thread
     const FKEYS = ['u', 'v', 'w', 'T', 'u0', 'v0', 'w0', 'T0', 'p', 'div', 'q', 'q0', 'Ts'];
-    const buf = new ArrayBuffer(FKEYS.length * n * 4 + n);
+    const buf = new ArrayBuffer(FKEYS.length * n * 4 + 2 * n);
     const F = (this.F = { buffer: buf, n, keys: FKEYS });
     FKEYS.forEach((k, i) => { F[k] = new Float32Array(buf, i * n * 4, n); });
     F.type = new Uint8Array(buf, FKEYS.length * n * 4, n);
+    // which solids are the envelope — the shell and the roof wedge, but not
+    // furniture or columns, so an interior solid is never a hole to outdoors
+    F.env = new Uint8Array(buf, FKEYS.length * n * 4 + n, n);
     F.Ts.fill(78);
     F.q.fill(wFromRH(78, 0.5));
     F.T.fill(78);
@@ -876,16 +1188,17 @@ class Component extends DCLogic {
 
   zone() {
     this.ap = {}; this.ret = {};
-    const { NX, NY, NZ, f } = this.g, S = this.sc, T = this.F.type;
-    T.fill(0);
+    const { NX, NY, NZ, f } = this.g, S = this.sc, T = this.F.type, E = this.F.env;
+    T.fill(0); E.fill(0);
     for (let k = 0; k < NZ; k++) for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
-      if (i === 0 || j === 0 || k === 0 || i === NX - 1 || j === NY - 1 || k === NZ - 1) T[this.at(i, j, k)] = 1;
+      if (i === 0 || j === 0 || k === 0 || i === NX - 1 || j === NY - 1 || k === NZ - 1) { const c = this.at(i, j, k); T[c] = 1; E[c] = 1; }
     }
-    // sloped ceiling: everything above the roof plane is solid
+    // sloped ceiling: everything above the roof plane is solid, and it is roof —
+    // part of the envelope, so it conducts to outdoors like a wall
     if (S.roof !== 'flat') {
       for (let i = 1; i <= NX - 2; i++) {
         const kMax = Math.min(NZ - 2, Math.max(1, Math.round(this.roofAt((i - 1) * f) / f)));
-        for (let k = kMax + 1; k <= NZ - 2; k++) for (let j = 1; j <= NY - 2; j++) T[this.at(i, j, k)] = 1;
+        for (let k = kMax + 1; k <= NZ - 2; k++) for (let j = 1; j <= NY - 2; j++) { const c = this.at(i, j, k); T[c] = 1; E[c] = 1; }
       }
     }
     // furniture and columns as interior solids
@@ -933,7 +1246,9 @@ class Component extends DCLogic {
       if (ii < NX - 2) { T[this.at(ii, 0, 1)] = 2; T[this.at(ii, NY - 1, 1)] = 2; }
     }
     this.openCells = [];
-    for (let c = 0; c < T.length; c++) if (T[c] === 2) this.openCells.push(c);
+    // an opening is no longer envelope: outdoor air arrives through it directly
+    // rather than by conduction through a wall
+    for (let c = 0; c < T.length; c++) if (T[c] === 2) { this.openCells.push(c); E[c] = 0; }
     // flat fluid-cell lists so the hot loops skip solids entirely, split into a
     // red/black checkerboard so the pressure sweep converges without direction bias
     const red = [], black = [];
@@ -1374,7 +1689,7 @@ class Component extends DCLogic {
   }
 
   thermal(dt, implicit) {
-    const { NX, NY, NZ, f, sxy, vol } = this.g, F = this.F, S = this.sc;
+    const { NX, NY, NZ, f, sxy, vol } = this.g, F = this.F, S = this.sc, E = F.env;
     const oNow = this.outT();
     F.T0.set(F.T);
     this.advect(F.T, F.T0, dt);
@@ -1386,8 +1701,10 @@ class Component extends DCLogic {
       let c = 1 + NX * (j + NY * k);
       for (let i = 1; i < NX - 1; i++, c++) {
         if (F.type[c] === 1) continue;
-        if (F.type[c - 1] === 1 || F.type[c + 1] === 1 || F.type[c - NX] === 1 || F.type[c + NX] === 1 || F.type[c + sxy] === 1) F.T[c] += hw * (oNow - F.T[c]);
-        else if (F.type[c - sxy] === 1) F.T[c] += hw * (72 - F.T[c]);
+        // only the envelope conducts to outdoors — a sofa or a column is an
+        // interior solid, and its heat exchange runs through surfaces(), as does
+        // the floor slab, which sits on ground rather than on outside air
+        if (E[c - 1] || E[c + 1] || E[c - NX] || E[c + NX] || E[c + sxy]) F.T[c] += hw * (oNow - F.T[c]);
       }
     }
     const cellMassCp = vol * 0.075 * 0.24;
@@ -1612,6 +1929,10 @@ class Component extends DCLogic {
       const o = this.root.children.pop();
       o.traverse((n) => { if (n.geometry) n.geometry.dispose(); if (n.material) n.material.dispose(); });
     }
+    // disposing a material does not release its textures, and both of these are
+    // reallocated below — a room-size drag rebuilds dozens of times
+    if (this.field3) this.field3.dispose();
+    if (this.sliceTex) this.sliceTex.dispose();
     const W = S.W, H = S.H, D = S.D;
 
     // envelope drawn explicitly so a shed or gable ceiling reads as a real roof
@@ -1946,7 +2267,9 @@ class Component extends DCLogic {
     const S = this.state, P = this.props;
     // a numeric hash rather than a per-frame string join, so the change check
     // allocates nothing
-    let zh = S.leak.length * 7919;
+    // hash the leakage rate zone() actually consumes — 'tight' and 'leaky' are
+    // both five characters, so hashing the name's length missed that switch
+    let zh = Math.round((LEAK[S.leak] ?? 1) * 100) * 7919;
     for (const o of S.objects) {
       const p = o.p;
       zh = (zh * 31 + o.kind.length * 131 + (o.on ? 1 : 0)) | 0;
@@ -1955,7 +2278,7 @@ class Component extends DCLogic {
       if (o.wall) zh = (zh * 31 + o.wall.charCodeAt(0)) | 0;
     }
     const snap = {
-      W: S.W, D: S.D, H: S.H, q: this.Q(), tc: this.TC(), th: S.theme, vw: S.view, sa: S.sliceAxis, hz: S.haze, ag: S.alphaG, ms: S.mass,
+      W: S.W, D: S.D, H: S.H, q: this.Q(), tc: this.TC(), th: S.theme, vw: S.view, sa: S.sliceAxis, hz: S.haze,
       zone: zh
     };
     const pv = this._prev; this._prev = snap;
@@ -2123,105 +2446,6 @@ class Component extends DCLogic {
     else this.slice.position.set(0, zt / 2, S.sliceAt * S.D - S.D / 2);
   }
 
-  // ── 2D placement editor ───────────────────────────────────────────────
-  edMap() {
-    const S = this.state, v = S.edView, sz = this.edSize || { w: 220, h: 186 };
-    const aw = v === 'elevE' ? S.D : S.W, ah = v === 'plan' ? S.D : S.H;
-    const sc = Math.min((sz.w - 30) / aw, (sz.h - 30) / ah);
-    const ox = (sz.w - aw * sc) / 2, oy = (sz.h - ah * sc) / 2;
-    return {
-      sc, ox, oy, aw, ah, v,
-      to: (p) => v === 'plan' ? [ox + p[0] * sc, oy + p[1] * sc]
-        : v === 'elevN' ? [ox + p[0] * sc, oy + (S.H - p[2]) * sc]
-        : [ox + p[1] * sc, oy + (S.H - p[2]) * sc],
-      from: (px, py) => ({ a: (px - ox) / sc, b: v === 'plan' ? (py - oy) / sc : S.H - (py - oy) / sc })
-    };
-  }
-
-  drawEd() {
-    const cv = this.edRef.current; if (!cv) return;
-    const cw = cv.clientWidth || 220, chh = cv.clientHeight || 186;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    if (!this.edSize || this.edSize.w !== cw || this.edSize.h !== chh) {
-      this.edSize = { w: cw, h: chh };
-      cv.width = Math.round(cw * dpr); cv.height = Math.round(chh * dpr);
-    }
-    const g = cv.getContext('2d');
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const S = this.state, dark = S.theme === 'dark';
-    g.clearRect(0, 0, cw, chh);
-    g.fillStyle = dark ? '#1d2d3d' : '#f2f2f3'; g.fillRect(0, 0, cw, chh);
-    const M = this.edMap();
-    g.strokeStyle = dark ? 'rgba(242,242,243,.09)' : 'rgba(29,31,32,.08)';
-    g.lineWidth = 1; g.beginPath();
-    for (let x = 0; x <= M.aw + 0.001; x++) { g.moveTo(M.ox + x * M.sc, M.oy); g.lineTo(M.ox + x * M.sc, M.oy + M.ah * M.sc); }
-    for (let y = 0; y <= M.ah + 0.001; y++) { g.moveTo(M.ox, M.oy + y * M.sc); g.lineTo(M.ox + M.aw * M.sc, M.oy + y * M.sc); }
-    g.stroke();
-    g.strokeStyle = dark ? 'rgba(242,242,243,.5)' : 'rgba(29,31,32,.5)';
-    g.lineWidth = 1.5; g.strokeRect(M.ox, M.oy, M.aw * M.sc, M.ah * M.sc);
-    g.font = "600 8px 'Barlow Condensed', sans-serif";
-    g.fillStyle = dark ? 'rgba(242,242,243,.5)' : 'rgba(29,31,32,.5)';
-    g.textBaseline = 'top';
-    const axl = M.v === 'plan' ? ['X \u2192', 'Y \u2193'] : M.v === 'elevN' ? ['X \u2192', 'Z \u2191'] : ['Y \u2192', 'Z \u2191'];
-    g.fillText(axl[0], M.ox, M.oy + M.ah * M.sc + 4);
-    g.fillText(axl[1], 3, M.oy);
-    for (const o of S.objects) {
-      const p = this.pos(o), q = M.to(p), selected = o.uid === S.sel;
-      g.globalAlpha = o.on ? 1 : 0.4;
-      g.fillStyle = KINDS[o.kind].col; g.strokeStyle = KINDS[o.kind].col;
-      if (isBox(o.kind) && M.v === 'plan') {
-        const w = o.p.fw * M.sc, d2 = o.p.fd * M.sc;
-        g.globalAlpha = o.on ? 0.32 : 0.16;
-        g.fillRect(q[0] - w / 2, q[1] - d2 / 2, w, d2);
-        g.globalAlpha = o.on ? 1 : 0.4;
-        g.strokeRect(q[0] - w / 2, q[1] - d2 / 2, w, d2);
-      } else {
-        const r = selected ? 5.5 : 4;
-        g.fillRect(q[0] - r, q[1] - r, r * 2, r * 2);
-      }
-      if (selected) {
-        g.globalAlpha = 1; g.lineWidth = 1; g.setLineDash([3, 3]);
-        g.strokeRect(q[0] - 9, q[1] - 9, 18, 18);
-        g.setLineDash([]);
-        g.font = "600 8.5px 'Barlow Condensed', sans-serif";
-        g.fillText(KINDS[o.kind].label.toUpperCase(), Math.min(q[0] + 11, cw - 62), q[1] - 5);
-      }
-      g.globalAlpha = 1;
-    }
-  }
-
-  edHit(px, py) {
-    const M = this.edMap();
-    let best = null, bd = 18 * 18;
-    for (const o of this.state.objects) {
-      const q = M.to(this.pos(o)), dd = (q[0] - px) * (q[0] - px) + (q[1] - py) * (q[1] - py);
-      if (dd < bd) { bd = dd; best = o; }
-    }
-    return best;
-  }
-
-  applyEdDrag(uid, a, b) {
-    const S = this.state, o = S.objects.find((x) => x.uid === uid); if (!o) return;
-    const K = KINDS[o.kind], v = S.edView;
-    const cl = (x, lo, hi) => Math.max(lo, Math.min(hi, Math.round(x * 4) / 4));
-    const upd = {};
-    if (v === 'plan') {
-      if (K.mount === 'wall') upd.along = cl((o.wall === 'W' || o.wall === 'E') ? b : a, 1.4, this.wallLen(o.wall) - 1.4);
-      else { upd.x = cl(a, 0.5, S.W - 0.5); upd.y = cl(b, 0.5, S.D - 0.5); }
-    } else {
-      const horizIsX = v === 'elevN';
-      if (K.mount === 'wall') {
-        const alongIsHoriz = horizIsX ? (o.wall === 'S' || o.wall === 'N') : (o.wall === 'W' || o.wall === 'E');
-        if (alongIsHoriz) upd.along = cl(a, 1.4, this.wallLen(o.wall) - 1.4);
-        if (o.kind !== 'door') upd.z = cl(b - 0.7, 0, S.H - 1.6);
-      } else {
-        upd[horizIsX ? 'x' : 'y'] = cl(a, 0.5, (horizIsX ? S.W : S.D) - 0.5);
-        if (K.mount === 'free') upd.z = cl(b, 0, S.H - 0.5);
-      }
-    }
-    if (Object.keys(upd).length) this.patch(uid, upd);
-  }
-
   // ── object mutation ───────────────────────────────────────────────────
   selObj() { return this.state.objects.find((o) => o.uid === this.state.sel) || null; }
   patch(uid, upd) {
@@ -2323,7 +2547,10 @@ class Component extends DCLogic {
     if (this.rampRef.current && this._rampCss && this.rampRef.current.style.background !== this._rampCss) {
       this.rampRef.current.style.background = this._rampCss;
     }
-    this.applySchedule(this.state.sunHour);
+    // the schedule is authoritative, but not while a field is being edited —
+    // otherwise a slider on a scheduled object snaps back under the cursor
+    const ae = document.activeElement;
+    if (!(ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable))) this.applySchedule(this.state.sunHour);
     set(this.statRef, NX + ' \u00d7 ' + NY + ' \u00d7 ' + NZ + ' CELLS \u00b7 ' + (f * 12).toFixed(1) + ' IN');
     if (this.frame % 150 === 0) this.persist();
     if (this.runRef.current) this.runRef.current.textContent = this.run ? Math.round((this.run.step / this.run.total) * 100) + '%' : (S.run === 1 ? 'complete' : 'not run');
@@ -2413,19 +2640,12 @@ class Component extends DCLogic {
     const C = S.unit === 'C';
     const dg = (x) => C ? Math.round((x - 32) * 5 / 9) + '\u00b0C' : x + '\u00b0F';
     const sliceFt = S.sliceAxis === 'Z' ? S.sliceAt * this.zTop() : S.sliceAxis === 'X' ? S.sliceAt * S.W : S.sliceAt * S.D;
-    const p = sel ? this.pos(sel) : null;
-    const ft = (x) => x === undefined || x === null ? '\u2014' : x.toFixed(1) + '\u2032';
-    const K = sel ? KINDS[sel.kind] : null;
-    const lock = !sel ? 'NOTHING SELECTED \u2014 THE 3D HANDLES SCALE THE ROOM'
-      : K.mount === 'wall' ? 'HELD ON THE ' + sel.wall + ' WALL \u00b7 ' + (S.edView === 'plan' ? 'ELEVATION SETS HEIGHT' : 'PLAN SLIDES IT ALONG')
-      : K.mount === 'ceiling' ? 'HELD AT THE CEILING \u00b7 PLAN SETS X AND Y'
-      : (S.edView === 'plan' ? 'FREE IN X AND Y' : 'THIS PROJECTION SETS ' + (S.edView === 'elevN' ? 'X' : 'Y') + ' AND Z');
     return {
-      theme: S.theme, canvasRef: this.canvasRef, edRef: this.edRef,
+      theme: S.theme, canvasRef: this.canvasRef,
       meanRef: this.meanRef, probeRef: this.probeRef, spreadRef: this.spreadRef, achRef: this.achRef,
       solarRef: this.solarRef, coolRef: this.coolRef, surfRef: this.surfRef, rhRef: this.rhRef, runRef: this.runRef, rampRef: this.rampRef,
       statRef: this.statRef, saveRef: this.saveRef,
-      tabObjects: S.tab === 'objects', tabPlace: S.tab === 'place', tabRoom: S.tab === 'room', tabSim: S.tab === 'sim',
+      tabObjects: S.tab === 'objects', tabRoom: S.tab === 'room', tabSim: S.tab === 'sim',
       setTab: (e) => this.setState({ tab: dv(e) }),
       objCount: S.objects.length + (S.objects.length === 1 ? ' object' : ' objects'),
       objList: S.objects.map((o) => ({
@@ -2508,23 +2728,6 @@ class Component extends DCLogic {
           onLabel: o.on ? 'ON' : 'OFF'
         };
       }),
-      edPlan: S.edView === 'plan', edElevN: S.edView === 'elevN', edElevE: S.edView === 'elevE',
-      setEdView: (e) => this.setState({ edView: dv(e) }),
-      selX: ft(p && p[0]), selY: ft(p && p[1]), selZ: ft(p && p[2]),
-      selLock: lock, halfH: (S.H / 2).toFixed(1) + '\u2032',
-      selZFrac: p ? Math.max(0, Math.min(1, p[2] / S.H)) : 0.5,
-      setSelZ: (e) => { if (sel && sel.kind !== 'door') this.patch(sel.uid, { z: Math.round(num(e) * S.H * 4) / 4 }); },
-      edDown: (e) => {
-        const cv = this.edRef.current; if (!cv) return;
-        const r = cv.getBoundingClientRect();
-        const hit = this.edHit(e.clientX - r.left, e.clientY - r.top);
-        if (hit) this.setState({ sel: hit.uid });
-        const uid = hit ? hit.uid : null, M = this.edMap();
-        const move = (ev) => { if (uid) { const q = M.from(ev.clientX - r.left, ev.clientY - r.top); this.applyEdDrag(uid, q.a, q.b); } };
-        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); this.persist(); };
-        window.addEventListener('pointermove', move);
-        window.addEventListener('pointerup', up);
-      },
       W: S.W, D: S.D, H: S.H, outdoor: S.outdoor, sunHour: S.sunHour, hourLabel: this.sunText(S.sunHour),
       setW: (e) => this.setState({ W: Math.max(6, num(e)) }),
       setD: (e) => this.setState({ D: Math.max(6, num(e)) }),

@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Vendored bundles are byte-exact upstream artifacts — the React UMD builds are
+# verified against the sha384 SRI hashes pinned in support.js, so line endings
+# must not be rewritten on checkout.
+vendor/** -text

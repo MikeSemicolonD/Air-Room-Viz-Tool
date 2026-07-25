@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Room airflow">
+  <!-- stratification: warm air riding above cool, in the solver's own WARM/COOL
+       colours. Amplitude is kept shallow and the two bands well apart so the
+       pair still reads as two flows at 16px. -->
+  <rect width="32" height="32" rx="5" fill="#1d2d3d"/>
+  <path d="M4.5 10.5q5.75-4 11.5 0t11.5 0" fill="none" stroke="#c08161" stroke-width="3.6" stroke-linecap="round"/>
+  <path d="M4.5 21.5q5.75 4 11.5 0t11.5 0" fill="none" stroke="#94bce3" stroke-width="3.6" stroke-linecap="round"/>
+</svg>
